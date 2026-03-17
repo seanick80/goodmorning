@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime
+from datetime import date, datetime, timezone
 
+import recurring_ical_events
 import requests
 from icalendar import Calendar
 
@@ -13,6 +14,9 @@ logger = logging.getLogger(__name__)
 
 def fetch_calendar_events(ics_url: str) -> list[dict]:
     """Fetch and parse an ICS feed, returning today's events.
+
+    Uses recurring-ical-events to expand RRULE recurrences so that
+    repeating events show up on the correct dates.
 
     Returns a list of dicts suitable for CalendarEvent creation.
     """
@@ -30,34 +34,44 @@ def fetch_calendar_events(ics_url: str) -> list[dict]:
         return []
 
     today = date.today()
+    tomorrow = today.replace(day=today.day + 1) if today.day < 28 else (
+        today + __import__("datetime").timedelta(days=1)
+    )
+
+    try:
+        recurring = recurring_ical_events.of(cal).between(today, tomorrow)
+    except Exception:
+        logger.exception("Failed to expand recurring events from %s", ics_url)
+        recurring = []
+
     events: list[dict] = []
 
-    for component in cal.walk("VEVENT"):
+    for component in recurring:
         dtstart = component.get("dtstart")
         if dtstart is None:
             continue
         dt_value = dtstart.dt
 
-        # Determine if this is an all-day event (date vs datetime)
         all_day = isinstance(dt_value, date) and not isinstance(dt_value, datetime)
-
-        # Filter to today's events
-        event_date = dt_value if all_day else dt_value.date()
-        if event_date != today:
-            continue
 
         dtend = component.get("dtend")
         end_value = dtend.dt if dtend else None
+
+        start = dt_value if isinstance(dt_value, datetime) else datetime.combine(
+            dt_value, datetime.min.time(), tzinfo=timezone.utc,
+        )
+        end = end_value if isinstance(end_value, datetime) else (
+            datetime.combine(end_value, datetime.min.time(), tzinfo=timezone.utc)
+            if end_value else None
+        )
 
         events.append({
             "uid": str(component.get("uid", "")),
             "title": str(component.get("summary", "Untitled")),
             "description": str(component.get("description", "")),
             "location": str(component.get("location", "")),
-            "start": dt_value if isinstance(dt_value, datetime) else datetime.combine(dt_value, datetime.min.time()),
-            "end": end_value if isinstance(end_value, datetime) else (
-                datetime.combine(end_value, datetime.min.time()) if end_value else None
-            ),
+            "start": start,
+            "end": end,
             "all_day": all_day,
         })
 

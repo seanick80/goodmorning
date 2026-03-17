@@ -2,6 +2,19 @@ import { useCalendar } from "../../hooks/useCalendar";
 import WidgetCard from "../WidgetCard";
 import styles from "./CalendarWidget.module.css";
 
+function formatTime(isoStr) {
+  if (!isoStr) return "";
+  try {
+    return new Date(isoStr).toLocaleTimeString("en-US", {
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return isoStr;
+  }
+}
+
 export default function CalendarWidget() {
   const { data, isLoading, isError } = useCalendar();
 
@@ -36,7 +49,7 @@ export default function CalendarWidget() {
       {events.map((event, i) => (
         <div key={i} className={styles.event}>
           <span className={styles.time}>
-            {event.start} - {event.end}
+            {event.all_day ? "All day" : `${formatTime(event.start)} – ${formatTime(event.end)}`}
           </span>
           <span className={styles.title}>{event.title}</span>
           {event.location && (

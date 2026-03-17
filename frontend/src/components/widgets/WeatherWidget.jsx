@@ -25,6 +25,17 @@ function formatHour(timeStr) {
   }
 }
 
+function formatTime12(timeStr) {
+  if (!timeStr) return "";
+  try {
+    // Handle "HH:MM:SS" time-only strings by prepending today's date
+    const d = timeStr.includes("T") ? new Date(timeStr) : new Date(`1970-01-01T${timeStr}`);
+    return d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit", hour12: true });
+  } catch {
+    return timeStr;
+  }
+}
+
 export default function WeatherWidget() {
   const { data, isLoading, isError, error } = useWeather();
 
@@ -117,8 +128,8 @@ export default function WeatherWidget() {
       )}
 
       <div className={styles.sunRow}>
-        {weather.sunrise && <span>&#x1F305; {weather.sunrise}</span>}
-        {weather.sunset && <span>&#x1F307; {weather.sunset}</span>}
+        {weather.sunrise && <span>&#x1F305; {formatTime12(weather.sunrise)}</span>}
+        {weather.sunset && <span>&#x1F307; {formatTime12(weather.sunset)}</span>}
         {weather.humidity != null && <span>&#x1F4A7; {weather.humidity}%</span>}
       </div>
     </WidgetCard>
