@@ -26,6 +26,21 @@
   margin-bottom: 0.35rem;
 }
 
+.titleLink {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+  margin-bottom: 0.35rem;
+  display: block;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.titleLink:hover {
+  color: #fff;
+  text-decoration: underline;
+}
+
 .meta {
   font-size: 0.75rem;
   color: rgba(255, 255, 255, 0.4);
@@ -36,21 +51,33 @@
   color: rgba(255, 255, 255, 0.5);
 }
 
-.dots {
+.nav {
   display: flex;
-  gap: 0.35rem;
-  margin-top: 0.75rem;
+  align-items: center;
   justify-content: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
 }
 
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  transition: background 0.3s ease;
+.navBtn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 1.2rem;
+  line-height: 1;
+  padding: 0.15rem 0.5rem;
+  cursor: pointer;
+  transition: color 0.2s, border-color 0.2s;
 }
 
-.dotActive {
-  background: rgba(255, 255, 255, 0.6);
+.navBtn:hover {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.counter {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.35);
+  font-variant-numeric: tabular-nums;
 }

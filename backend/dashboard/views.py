@@ -21,7 +21,27 @@ class WeatherView(APIView):
     """GET /api/weather/ -- returns the latest cached weather data."""
 
     def get(self, request):
-        weather = WeatherCache.objects.first()
+        # Get weather for the user's configured location
+        location_name = ""
+        try:
+            user = User.objects.filter(is_superuser=True).first()
+            if user and hasattr(user, "dashboard"):
+                for widget in user.dashboard.widget_layout:
+                    if widget.get("widget") == "weather":
+                        lat = widget["settings"].get("latitude")
+                        lon = widget["settings"].get("longitude")
+                        location_name = widget["settings"].get("location_name", "")
+                        if lat and lon:
+                            key = f"{round(lat, 2)},{round(lon, 2)}"
+                            weather = WeatherCache.objects.filter(location_key=key).first()
+                            if weather:
+                                data = WeatherCacheSerializer(weather).data
+                                data["location_name"] = location_name
+                                return Response(data)
+        except Exception:
+            pass
+
+        weather = WeatherCache.objects.order_by("-fetched_at").first()
         if weather is None:
             return Response(
                 {"detail": "No weather data available yet."},
@@ -32,11 +52,24 @@ class WeatherView(APIView):
 
 
 class StocksView(APIView):
-    """GET /api/stocks/ -- returns all cached stock quotes."""
+    """GET /api/stocks/ -- returns cached stock quotes for configured symbols."""
 
     def get(self, request):
-        quotes = StockQuote.objects.all().order_by("symbol")
-        serializer = StockQuoteSerializer(quotes, many=True)
+        # Only return symbols the user has configured
+        symbols = set()
+        try:
+            user = User.objects.filter(is_superuser=True).first()
+            if user and hasattr(user, "dashboard"):
+                for widget in user.dashboard.widget_layout:
+                    if widget.get("widget") == "stocks":
+                        symbols.update(widget["settings"].get("symbols", []))
+        except Exception:
+            pass
+
+        qs = StockQuote.objects.all()
+        if symbols:
+            qs = qs.filter(symbol__in=symbols)
+        serializer = StockQuoteSerializer(qs.order_by("symbol"), many=True)
         return Response(serializer.data)
 
 

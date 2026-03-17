@@ -234,7 +234,8 @@ class TestFetchCalendarJob:
                 "all_day": False,
             },
         ]
-        with patch("dashboard.jobs.fetch_calendar_events", return_value=mock_events):
+        with patch("dashboard.jobs.fetch_calendar_events", return_value=mock_events), \
+             patch.dict("os.environ", {"USER_CALENDAR": ""}, clear=False):
             from dashboard.jobs import fetch_calendar
 
             fetch_calendar()
@@ -249,7 +250,7 @@ class TestFetchCalendarJob:
         with patch(
             "dashboard.jobs.fetch_calendar_events",
             side_effect=Exception("Network error"),
-        ):
+        ), patch.dict("os.environ", {"USER_CALENDAR": ""}, clear=False):
             from dashboard.jobs import fetch_calendar
 
             # Should not raise

@@ -2191,6 +2191,7 @@ See Section 11 above.
   - Profile info (display name, avatar on dashboard)
   - Gmail integration (unread count widget)
 - **Implementation:** Add `allauth` to INSTALLED_APPS, configure Google provider, create a login page, protect API endpoints with authentication.
+- **Per-user calendar auto-discovery:** Once Google OAuth is in place, use the Google Calendar API to automatically discover and list the user's calendars. Replace the current `NICKS_CALENDAR` env var and manual `ics_urls` approach with an authenticated calendar picker in the widget settings UI. Each user's calendars are fetched via their OAuth token — no manual URL configuration needed.
 
 ### Additional Widgets
 

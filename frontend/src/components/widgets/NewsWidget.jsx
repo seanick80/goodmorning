@@ -62,12 +62,42 @@ export default function NewsWidget() {
     );
   }
 
-  const headline = headlines[currentIndex % headlines.length];
+  const idx = currentIndex % headlines.length;
+  const headline = headlines[idx];
+
+  const goTo = (next) => {
+    setVisible(false);
+    setTimeout(() => {
+      setCurrentIndex(next);
+      setVisible(true);
+    }, 300);
+  };
+
+  const goPrev = (e) => {
+    e.stopPropagation();
+    goTo((idx - 1 + headlines.length) % headlines.length);
+  };
+
+  const goNext = (e) => {
+    e.stopPropagation();
+    goTo((idx + 1) % headlines.length);
+  };
 
   return (
     <WidgetCard title="News">
       <div className={`${styles.headline} ${visible ? styles.visible : styles.hidden}`}>
-        <div className={styles.title}>{headline.title}</div>
+        {headline.link ? (
+          <a
+            href={headline.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.titleLink}
+          >
+            {headline.title}
+          </a>
+        ) : (
+          <div className={styles.title}>{headline.title}</div>
+        )}
         <div className={styles.meta}>
           <span className={styles.source}>{headline.source_name}</span>
           {headline.published_at && (
@@ -79,13 +109,10 @@ export default function NewsWidget() {
         </div>
       </div>
       {headlines.length > 1 && (
-        <div className={styles.dots}>
-          {headlines.map((_, i) => (
-            <span
-              key={i}
-              className={`${styles.dot} ${i === currentIndex % headlines.length ? styles.dotActive : ""}`}
-            />
-          ))}
+        <div className={styles.nav}>
+          <button className={styles.navBtn} onClick={goPrev} aria-label="Previous headline">&lsaquo;</button>
+          <span className={styles.counter}>{idx + 1} / {headlines.length}</span>
+          <button className={styles.navBtn} onClick={goNext} aria-label="Next headline">&rsaquo;</button>
         </div>
       )}
     </WidgetCard>

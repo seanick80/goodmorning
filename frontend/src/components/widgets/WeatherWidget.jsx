@@ -15,19 +15,14 @@ function weatherEmoji(code) {
   return "\uD83C\uDF24\uFE0F";
 }
 
-function weatherDescription(code) {
-  if (code === 0) return "Clear sky";
-  if (code === 1) return "Mainly clear";
-  if (code === 2) return "Partly cloudy";
-  if (code === 3) return "Overcast";
-  if (code <= 49) return "Foggy";
-  if (code <= 59) return "Drizzle";
-  if (code <= 69) return "Rain";
-  if (code <= 79) return "Snow";
-  if (code <= 82) return "Rain showers";
-  if (code <= 86) return "Snow showers";
-  if (code <= 99) return "Thunderstorm";
-  return "Unknown";
+function formatHour(timeStr) {
+  if (!timeStr) return "";
+  try {
+    const d = new Date(timeStr);
+    return d.toLocaleTimeString("en-US", { hour: "numeric", hour12: true });
+  } catch {
+    return timeStr;
+  }
 }
 
 export default function WeatherWidget() {
@@ -63,10 +58,19 @@ export default function WeatherWidget() {
   }
 
   const unit = weather.temperature_unit === "celsius" ? "\u00B0C" : "\u00B0F";
+  const forecast = weather.hourly_forecast || [];
+  // Show next 6 hours from current time
+  const now = new Date();
+  const upcomingForecast = forecast
+    .filter((h) => new Date(h.time) >= now)
+    .slice(0, 6);
+  // Fall back to last 6 entries if all are in the past
+  const displayForecast =
+    upcomingForecast.length > 0 ? upcomingForecast : forecast.slice(-6);
 
   return (
-    <WidgetCard title="Weather">
-      <div className={styles.main}>
+    <WidgetCard title={weather.location_name || "Weather"}>
+      <div className={styles.current}>
         <span className={styles.emoji}>
           {weatherEmoji(weather.weather_code)}
         </span>
@@ -74,44 +78,48 @@ export default function WeatherWidget() {
           {Math.round(weather.temperature)}
           <span className={styles.unit}>{unit}</span>
         </div>
-      </div>
-
-      <div className={styles.description}>
-        {weather.weather_description ||
-          weatherDescription(weather.weather_code)}
-      </div>
-
-      <div className={styles.details}>
-        <div className={styles.detail}>
-          <span className={styles.detailLabel}>Feels like</span>
-          <span className={styles.detailValue}>
-            {weather.feels_like != null
-              ? `${Math.round(weather.feels_like)}${unit}`
-              : "--"}
+        <div className={styles.currentDetails}>
+          <span className={styles.description}>
+            {weather.weather_description || ""}
           </span>
-        </div>
-        <div className={styles.detail}>
-          <span className={styles.detailLabel}>High / Low</span>
-          <span className={styles.detailValue}>
-            {weather.daily_high != null && weather.daily_low != null
-              ? `${Math.round(weather.daily_high)}${unit} / ${Math.round(weather.daily_low)}${unit}`
-              : "--"}
+          <span className={styles.highLow}>
+            {weather.daily_high != null &&
+              `H:${Math.round(weather.daily_high)}${unit}`}
+            {weather.daily_low != null &&
+              ` L:${Math.round(weather.daily_low)}${unit}`}
           </span>
-        </div>
-        <div className={styles.detail}>
-          <span className={styles.detailLabel}>Humidity</span>
-          <span className={styles.detailValue}>
-            {weather.humidity != null ? `${weather.humidity}%` : "--"}
-          </span>
-        </div>
-        {weather.sunrise && (
-          <div className={styles.detail}>
-            <span className={styles.detailLabel}>Sunrise / Sunset</span>
-            <span className={styles.detailValue}>
-              {weather.sunrise} / {weather.sunset || "--"}
+          {weather.feels_like != null && (
+            <span className={styles.feelsLike}>
+              Feels like {Math.round(weather.feels_like)}
+              {unit}
             </span>
-          </div>
-        )}
+          )}
+        </div>
+      </div>
+
+      {displayForecast.length > 0 && (
+        <div className={styles.forecastBar}>
+          {displayForecast.map((h, i) => (
+            <div key={i} className={styles.forecastHour}>
+              <span className={styles.forecastHourLabel}>
+                {formatHour(h.time)}
+              </span>
+              <span className={styles.forecastHourEmoji}>
+                {weatherEmoji(h.code ?? h.weather_code)}
+              </span>
+              <span className={styles.forecastHourTemp}>
+                {Math.round(h.temp)}
+                {unit}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={styles.sunRow}>
+        {weather.sunrise && <span>&#x1F305; {weather.sunrise}</span>}
+        {weather.sunset && <span>&#x1F307; {weather.sunset}</span>}
+        {weather.humidity != null && <span>&#x1F4A7; {weather.humidity}%</span>}
       </div>
     </WidgetCard>
   );

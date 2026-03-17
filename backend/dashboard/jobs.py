@@ -82,6 +82,11 @@ def fetch_calendar() -> None:
     dashboards = UserDashboard.objects.all()
     ics_urls: set[str] = set()
 
+    # Include calendar URL from environment if set (keeps URL out of DB/source)
+    env_calendar = os.environ.get("USER_CALENDAR", "")
+    if env_calendar:
+        ics_urls.add(env_calendar)
+
     for dashboard in dashboards:
         for widget in dashboard.widget_layout:
             if widget.get("widget") == "calendar" and widget.get("enabled"):
