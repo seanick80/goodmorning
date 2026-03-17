@@ -1,0 +1,226 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 2rem;
+}
+
+.variantWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.variantLabel {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+/* Variant A: Compact Card */
+.compactMain {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.compactEmoji {
+  font-size: 2.8rem;
+  line-height: 1;
+}
+
+.compactTemp {
+  font-size: 3rem;
+  font-weight: 200;
+  color: #fff;
+  line-height: 1;
+}
+
+.compactUnit {
+  font-size: 1.4rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.5);
+  vertical-align: super;
+}
+
+.compactDesc {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.75rem;
+}
+
+.compactDetails {
+  display: flex;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+/* Variant B: Full Panel */
+.fullMain {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.fullEmoji {
+  font-size: 5rem;
+  line-height: 1;
+}
+
+.fullTempBlock {
+  display: flex;
+  flex-direction: column;
+}
+
+.fullTemp {
+  font-size: 4rem;
+  font-weight: 200;
+  color: #fff;
+  line-height: 1;
+}
+
+.fullUnit {
+  font-size: 1.6rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.5);
+  vertical-align: super;
+}
+
+.fullDesc {
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 0.25rem;
+}
+
+.fullGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.fullDetail {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.fullDetailLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.fullDetailValue {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+/* Variant C: Minimal Strip */
+.stripRow {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.25rem 0;
+}
+
+.stripEmoji {
+  font-size: 1.8rem;
+  line-height: 1;
+}
+
+.stripTemp {
+  font-size: 1.6rem;
+  font-weight: 300;
+  color: #fff;
+}
+
+.stripDesc {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.5);
+  flex: 1;
+}
+
+.stripHighLow {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.4);
+  white-space: nowrap;
+}
+
+/* Variant D: Forecast Focus */
+.forecastCurrent {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.forecastEmoji {
+  font-size: 2.5rem;
+  line-height: 1;
+}
+
+.forecastTemp {
+  font-size: 3rem;
+  font-weight: 200;
+  color: #fff;
+  line-height: 1;
+}
+
+.forecastUnit {
+  font-size: 1.2rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.5);
+  vertical-align: super;
+}
+
+.forecastDesc {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.forecastBar {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.75rem 0;
+  margin-bottom: 0.75rem;
+}
+
+.forecastHour {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.forecastHourLabel {
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+  letter-spacing: 0.04em;
+}
+
+.forecastHourEmoji {
+  font-size: 1.2rem;
+}
+
+.forecastHourTemp {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-variant-numeric: tabular-nums;
+}
+
+.forecastSun {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.4);
+}

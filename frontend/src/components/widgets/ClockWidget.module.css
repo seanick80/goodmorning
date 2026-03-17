@@ -1,26 +1,74 @@
 .clock {
   text-align: center;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 255, 255, 0.9);
 }
 
 .greeting {
-  font-size: 1.4rem;
+  font-size: 1.6rem;
   font-weight: 300;
-  color: rgba(255, 255, 255, 0.6);
+  color: #f0a050;
   margin-bottom: 0.25rem;
 }
 
-.time {
-  font-size: 4rem;
-  font-weight: 200;
-  letter-spacing: 0.04em;
+.primaryTime {
+  font-size: 4.5rem;
+  font-weight: 700;
   color: #fff;
-  line-height: 1.1;
+  line-height: 1;
+  letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
 }
 
-.date {
-  font-size: 1.1rem;
-  font-weight: 400;
-  color: rgba(255, 255, 255, 0.5);
+.primaryLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.4);
   margin-top: 0.5rem;
+}
+
+.date {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.35);
+  margin-top: 0.25rem;
+}
+
+.divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 1.25rem 2rem;
+}
+
+.auxRow {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+}
+
+.auxClock {
+  text-align: center;
+}
+
+.auxLabel {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 0.25rem;
+}
+
+.auxTime {
+  font-size: 1.75rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.55);
+  font-variant-numeric: tabular-nums;
 }
