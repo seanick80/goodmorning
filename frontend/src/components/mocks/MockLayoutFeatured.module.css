@@ -1,0 +1,245 @@
+.featured {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .featured {
+    grid-template-columns: 1fr 2fr 1fr;
+    grid-template-rows: auto auto auto;
+    padding: 2rem;
+  }
+}
+
+/* Clock overlay - small, top-right corner */
+.clockOverlay {
+  text-align: right;
+}
+
+@media (min-width: 768px) {
+  .clockOverlay {
+    grid-column: 3;
+    grid-row: 1;
+  }
+}
+
+.greeting {
+  font-size: 1rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.15rem;
+}
+
+.time {
+  font-size: 2.2rem;
+  font-weight: 200;
+  letter-spacing: 0.04em;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.date {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.25rem;
+}
+
+/* Featured weather card - large, center */
+.weatherFeatured {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+@media (min-width: 768px) {
+  .weatherFeatured {
+    grid-column: 1 / -1;
+    grid-row: 2;
+  }
+}
+
+.weatherTop {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.weatherEmoji {
+  font-size: 4.5rem;
+  line-height: 1;
+}
+
+.weatherTempBlock {
+  text-align: center;
+}
+
+.weatherTemp {
+  font-size: 5rem;
+  font-weight: 200;
+  color: #fff;
+  line-height: 1;
+}
+
+.weatherUnit {
+  font-size: 2rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.5);
+  vertical-align: super;
+}
+
+.weatherDesc {
+  font-size: 1.2rem;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: capitalize;
+  text-align: center;
+  margin-bottom: 1.5rem;
+}
+
+.weatherDetails {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .weatherDetails {
+    grid-template-columns: repeat(4, 1fr);
+    max-width: none;
+  }
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  text-align: center;
+}
+
+.detailLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.detailValue {
+  font-size: 1.05rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Bottom row: stocks left, calendar right, news bottom */
+.bottomRow {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .bottomRow {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+}
+
+.stockRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stockRow:last-child {
+  border-bottom: none;
+}
+
+.stockSymbol {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.stockPrice {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  flex: 1;
+  text-align: right;
+  margin-right: 0.75rem;
+}
+
+.stockChange {
+  font-size: 0.8rem;
+  font-weight: 500;
+  min-width: 70px;
+  text-align: right;
+}
+
+.stockUp {
+  color: #4ade80;
+}
+
+.stockDown {
+  color: #f87171;
+}
+
+.calendarEvent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.calendarEvent:last-child {
+  border-bottom: none;
+}
+
+.calendarTime {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+.calendarTitle {
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.calendarLocation {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.newsItem {
+  padding: 0.55rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.newsItem:last-child {
+  border-bottom: none;
+}
+
+.newsTitle {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.9);
+  margin-bottom: 0.2rem;
+  line-height: 1.4;
+}
+
+.newsMeta {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.newsSource {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+}

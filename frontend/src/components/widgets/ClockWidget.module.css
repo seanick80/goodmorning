@@ -1,0 +1,26 @@
+.clock {
+  text-align: center;
+}
+
+.greeting {
+  font-size: 1.4rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.25rem;
+}
+
+.time {
+  font-size: 4rem;
+  font-weight: 200;
+  letter-spacing: 0.04em;
+  color: #fff;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+
+.date {
+  font-size: 1.1rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.5);
+  margin-top: 0.5rem;
+}

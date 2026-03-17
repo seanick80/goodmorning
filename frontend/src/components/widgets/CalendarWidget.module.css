@@ -1,0 +1,35 @@
+.loading,
+.error,
+.empty {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.95rem;
+  padding: 1rem 0;
+}
+
+.event {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.event:last-child {
+  border-bottom: none;
+}
+
+.time {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-variant-numeric: tabular-nums;
+}
+
+.title {
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.location {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}

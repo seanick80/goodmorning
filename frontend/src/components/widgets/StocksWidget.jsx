@@ -1,0 +1,46 @@
+import { useStocks } from "../../hooks/useStocks";
+import WidgetCard from "../WidgetCard";
+import styles from "./StocksWidget.module.css";
+
+export default function StocksWidget() {
+  const { data, isLoading, isError } = useStocks();
+
+  if (isLoading) {
+    return (
+      <WidgetCard title="Stocks">
+        <div className={styles.loading}>Loading stocks...</div>
+      </WidgetCard>
+    );
+  }
+
+  if (isError) {
+    return (
+      <WidgetCard title="Stocks">
+        <div className={styles.error}>Unable to load stock data</div>
+      </WidgetCard>
+    );
+  }
+
+  const stocks = Array.isArray(data) ? data : [];
+
+  return (
+    <WidgetCard title="Stocks">
+      {stocks.map((stock) => {
+        const change = parseFloat(stock.change);
+        const isUp = change >= 0;
+        return (
+          <div key={stock.symbol} className={styles.row}>
+            <span className={styles.symbol}>{stock.symbol}</span>
+            <span className={styles.price}>${stock.current_price}</span>
+            <span
+              className={`${styles.change} ${isUp ? styles.up : styles.down}`}
+            >
+              {isUp ? "\u25B2" : "\u25BC"}{" "}
+              {Math.abs(parseFloat(stock.change_percent)).toFixed(2)}%
+            </span>
+          </div>
+        );
+      })}
+    </WidgetCard>
+  );
+}

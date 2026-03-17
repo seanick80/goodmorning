@@ -1,0 +1,225 @@
+.bands {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.5rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+@media (min-width: 768px) {
+  .bands {
+    padding: 2rem;
+  }
+}
+
+.topBar {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 768px) {
+  .topBar {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.clockCard {
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.greeting {
+  font-size: 1.2rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.time {
+  font-size: 3rem;
+  font-weight: 200;
+  letter-spacing: 0.04em;
+  color: #fff;
+  line-height: 1;
+}
+
+.date {
+  font-size: 1rem;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.weatherMain {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.weatherEmoji {
+  font-size: 2.8rem;
+  line-height: 1;
+}
+
+.weatherTemp {
+  font-size: 3rem;
+  font-weight: 200;
+  color: #fff;
+  line-height: 1;
+}
+
+.weatherUnit {
+  font-size: 1.4rem;
+  font-weight: 300;
+  color: rgba(255, 255, 255, 0.5);
+  vertical-align: super;
+}
+
+.weatherDesc {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 1rem;
+  text-transform: capitalize;
+}
+
+.weatherDetails {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.detailItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.detailLabel {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.detailValue {
+  font-size: 0.95rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.stocksBand {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+}
+
+@media (min-width: 768px) {
+  .stocksBand {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.stockCard {
+  text-align: center;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.stockSymbol {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin-bottom: 0.35rem;
+  display: block;
+}
+
+.stockPrice {
+  font-size: 1.3rem;
+  font-weight: 300;
+  color: #fff;
+  display: block;
+  margin-bottom: 0.25rem;
+}
+
+.stockChange {
+  font-size: 0.8rem;
+  font-weight: 500;
+  display: block;
+}
+
+.stockUp {
+  color: #4ade80;
+}
+
+.stockDown {
+  color: #f87171;
+}
+
+.calendarEvent {
+  display: flex;
+  gap: 1rem;
+  padding: 0.6rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.calendarEvent:last-child {
+  border-bottom: none;
+}
+
+.calendarTime {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.5);
+  min-width: 100px;
+  font-variant-numeric: tabular-nums;
+}
+
+.calendarTitle {
+  font-size: 0.95rem;
+  color: #fff;
+  flex: 1;
+}
+
+.calendarLocation {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.newsTicker {
+  display: flex;
+  gap: 2rem;
+  overflow: hidden;
+  align-items: baseline;
+  flex-wrap: wrap;
+}
+
+.newsChip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.newsSource {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.newsTitle {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.newsTime {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.35);
+}

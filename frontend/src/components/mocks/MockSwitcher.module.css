@@ -1,0 +1,59 @@
+.container {
+  min-height: 100vh;
+}
+
+.tabBar {
+  display: flex;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 1rem 1.5rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.tabBarInner {
+  display: flex;
+  gap: 0.25rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 0.25rem;
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.tab {
+  padding: 0.5rem 1.25rem;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+}
+
+.tab:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tabActive {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.tabActive:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.tabLive {
+  color: #4ade80;
+}
+
+.tabLive.tabActive {
+  color: #4ade80;
+}

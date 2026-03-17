@@ -1,0 +1,12 @@
+django>=5.0
+djangorestframework
+django-apscheduler
+django-cors-headers
+dj-database-url
+python-dotenv
+requests
+icalendar>=6.0
+feedparser>=6.0
+gunicorn
+whitenoise
+psycopg[binary]

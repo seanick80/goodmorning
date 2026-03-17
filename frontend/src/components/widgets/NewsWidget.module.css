@@ -1,0 +1,56 @@
+.loading,
+.error,
+.empty {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.95rem;
+  padding: 1rem 0;
+}
+
+.headline {
+  transition: opacity 0.4s ease;
+  padding: 0.25rem 0;
+}
+
+.visible {
+  opacity: 1;
+}
+
+.hidden {
+  opacity: 0;
+}
+
+.title {
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.9);
+  line-height: 1.4;
+  margin-bottom: 0.35rem;
+}
+
+.meta {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.source {
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.dots {
+  display: flex;
+  gap: 0.35rem;
+  margin-top: 0.75rem;
+  justify-content: center;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transition: background 0.3s ease;
+}
+
+.dotActive {
+  background: rgba(255, 255, 255, 0.6);
+}

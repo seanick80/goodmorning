@@ -1,0 +1,47 @@
+.loading,
+.error {
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.95rem;
+  padding: 1rem 0;
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.row:last-child {
+  border-bottom: none;
+}
+
+.symbol {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.price {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.8);
+  flex: 1;
+  text-align: right;
+  margin-right: 0.75rem;
+}
+
+.change {
+  font-size: 0.8rem;
+  font-weight: 500;
+  min-width: 70px;
+  text-align: right;
+}
+
+.up {
+  color: #4ade80;
+}
+
+.down {
+  color: #f87171;
+}
