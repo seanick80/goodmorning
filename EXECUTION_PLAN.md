@@ -2199,13 +2199,37 @@ See Section 11 above.
 |--------|-----------|------------|
 | ~~News headlines~~ | ~~RSS feeds~~ | **Implemented in Phase 6.1** |
 | Transit/commute | Google Maps Directions API | Medium |
-| Photo slideshow | Google Photos API or local folder | Medium |
+| Photo slideshow | Local folder or Google Photos API | Medium (see details below) |
 | Reminders/to-do | Google Tasks API or local model | Low |
 | System status | psutil (CPU, RAM, disk) | Low |
 | Cryptocurrency | CoinGecko API (free, no key) | Low |
 
+### Photo Slideshow Mode
+
+A full-screen or widget-based slideshow that rotates through the user's favorite photos on the dashboard.
+
+**Phase 1 — Local folder:**
+- User configures a local image folder path in dashboard settings (e.g., `SLIDESHOW_FOLDER` env var or widget settings).
+- Backend serves images via a new `/api/slideshow/` endpoint that lists available images and serves them.
+- Frontend displays images full-screen behind the dashboard (background slideshow) or as a dedicated widget card, cross-fading every 30–60 seconds (configurable).
+- Shuffle or sequential ordering, configurable.
+
+**Phase 2 — Google Photos integration:**
+- Requires Google OAuth (see Google Account Integration above).
+- User selects a specific Google Photos album from their account via a settings picker.
+- Backend fetches album media items via the Google Photos API, caches thumbnails/URLs.
+- Frontend displays photos the same way as Phase 1, sourced from the cached album.
+
+**Design considerations:**
+- Photos should be displayed with a subtle Ken Burns (pan/zoom) effect for visual interest.
+- When used as a background, apply a dark overlay so widgets remain readable.
+- Transition styles: crossfade (default), slide, or fade-to-black.
+- Respect image orientation/EXIF data.
+- **Widget transparency:** Widget cards should use semi-transparent backgrounds (50–75% opacity) so the background image shows through subtly. This replaces the current opaque glass-morphism cards. The transparency level should be configurable per-user in dashboard settings.
+
 ### UI Enhancements
 
+- **Custom clock labels:** Allow renaming aux clock locations with personal labels (e.g., "Lizzii" instead of "Guernsey", "Mark" instead of "Gig Harbor"). Store custom labels in the clock widget settings. Display format: custom label on top, timezone city below in smaller text, so users see family names at a glance while retaining location context.
 - **Theme customization:** Dark mode via CSS custom properties toggle. User preference stored in `UserDashboard.widget_layout` or a separate theme field.
 - **Multi-dashboard support:** Multiple `UserDashboard` rows per user (e.g., "Morning" vs "Evening" layouts). Add a `name` field and modify the API to support switching.
 - **PWA / kiosk mode:** `vite-plugin-pwa` for installable app. Android tablets support kiosk mode for full-screen display.

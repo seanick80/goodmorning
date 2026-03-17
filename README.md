@@ -2,6 +2,8 @@
 
 A full-stack web dashboard designed for a tablet display in a living room. Shows at-a-glance information you want to see first thing in the morning: time, weather, stocks, calendar, and news headlines.
 
+![Dashboard Screenshot](docs/dashboard-screenshot.png)
+
 ## Tech Stack
 
 - **Backend:** Django 5.x + Django REST Framework
