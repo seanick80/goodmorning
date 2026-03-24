@@ -121,3 +121,5 @@ class NewsHeadlineFactory(DjangoModelFactory):
     published_at = factory.LazyFunction(
         lambda: datetime(2026, 3, 17, 8, 0, tzinfo=timezone.utc)
     )
+
+

@@ -7,7 +7,13 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .models import CalendarEvent, NewsHeadline, StockQuote, UserDashboard, WeatherCache
+from .models import (
+    CalendarEvent,
+    NewsHeadline,
+    StockQuote,
+    UserDashboard,
+    WeatherCache,
+)
 from .serializers import (
     CalendarEventSerializer,
     NewsHeadlineSerializer,
@@ -134,3 +140,100 @@ class DashboardView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class GeocodeView(APIView):
+    """GET /api/geocode/?q=hobart -- search cities by name."""
+
+    def get(self, request):
+        query = request.query_params.get("q", "").strip()
+        if len(query) < 2:
+            return Response([])
+
+        from .services.geocode import search_locations
+
+        results = search_locations(query)
+        return Response(results)
+
+
+class WeatherLocationView(APIView):
+    """POST /api/weather/location/ -- update weather location and fetch new data.
+
+    Expects: {"latitude": float, "longitude": float, "location_name": str}
+    """
+
+    def post(self, request):
+        lat = request.data.get("latitude")
+        lon = request.data.get("longitude")
+        location_name = request.data.get("location_name", "")
+
+        if lat is None or lon is None:
+            return Response(
+                {"detail": "latitude and longitude are required."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # Update dashboard config
+        user = User.objects.filter(is_superuser=True).first()
+        if not user:
+            return Response(
+                {"detail": "No user configured."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        dashboard, _ = UserDashboard.objects.get_or_create(
+            user=user, defaults={"widget_layout": []}
+        )
+
+        # Find or create weather widget in layout
+        found = False
+        for widget in dashboard.widget_layout:
+            if widget.get("widget") == "weather":
+                widget["settings"]["latitude"] = lat
+                widget["settings"]["longitude"] = lon
+                widget["settings"]["location_name"] = location_name
+                found = True
+                break
+
+        if not found:
+            dashboard.widget_layout.append({
+                "widget": "weather",
+                "enabled": True,
+                "position": 1,
+                "settings": {
+                    "latitude": lat,
+                    "longitude": lon,
+                    "location_name": location_name,
+                    "units": "fahrenheit",
+                },
+            })
+
+        dashboard.save()
+
+        # Fetch weather for the new location
+        from .services.weather import fetch_weather_data
+
+        location_key = f"{round(lat, 2)},{round(lon, 2)}"
+        units = "fahrenheit"
+        for widget in dashboard.widget_layout:
+            if widget.get("widget") == "weather":
+                units = widget["settings"].get("units", "fahrenheit")
+                break
+
+        try:
+            weather_data = fetch_weather_data(lat, lon, units=units)
+            WeatherCache.objects.update_or_create(
+                location_key=location_key,
+                defaults={
+                    "latitude": lat,
+                    "longitude": lon,
+                    **weather_data,
+                },
+            )
+        except Exception:
+            return Response(
+                {"detail": "Location updated but weather fetch failed."},
+                status=status.HTTP_202_ACCEPTED,
+            )
+
+        return Response({"detail": "Location updated.", "location_key": location_key})

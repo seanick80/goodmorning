@@ -10,4 +10,6 @@ urlpatterns = [
     path("calendar/", views.CalendarView.as_view(), name="calendar"),
     path("news/", views.NewsView.as_view(), name="news"),
     path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
+    path("geocode/", views.GeocodeView.as_view(), name="geocode"),
+    path("weather/location/", views.WeatherLocationView.as_view(), name="weather-location"),
 ]

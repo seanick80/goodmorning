@@ -1,0 +1,85 @@
+.editButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.35);
+  padding: 0.1rem 0.3rem;
+  margin-left: 0.25rem;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+  vertical-align: middle;
+}
+
+.editButton:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 101;
+  margin-top: 0.25rem;
+}
+
+.wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.input {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.85rem;
+  padding: 0.4rem 0.6rem;
+  width: 220px;
+  outline: none;
+}
+
+.input:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.results {
+  background: rgba(20, 20, 30, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  max-height: 200px;
+  overflow-y: auto;
+  backdrop-filter: blur(12px);
+}
+
+.resultItem {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.resultItem:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.noResults {
+  padding: 0.45rem 0.7rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.35);
+}

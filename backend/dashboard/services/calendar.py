@@ -9,6 +9,8 @@ import recurring_ical_events
 import requests
 from icalendar import Calendar
 
+from ._http import fetch_with_retry
+
 logger = logging.getLogger(__name__)
 
 
@@ -21,8 +23,7 @@ def fetch_calendar_events(ics_url: str) -> list[dict]:
     Returns a list of dicts suitable for CalendarEvent creation.
     """
     try:
-        response = requests.get(ics_url, timeout=15)
-        response.raise_for_status()
+        response = fetch_with_retry(ics_url)
     except requests.RequestException:
         logger.exception("Failed to fetch ICS feed: %s", ics_url)
         return []

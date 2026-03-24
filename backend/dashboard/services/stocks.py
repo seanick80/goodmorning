@@ -7,6 +7,8 @@ from datetime import datetime, timezone
 
 import requests
 
+from ._http import fetch_with_retry
+
 logger = logging.getLogger(__name__)
 
 FINNHUB_QUOTE_URL = "https://finnhub.io/api/v1/quote"
@@ -23,12 +25,10 @@ def fetch_stock_quote(symbol: str, api_key: str) -> dict | None:
         return None
 
     try:
-        response = requests.get(
+        response = fetch_with_retry(
             FINNHUB_QUOTE_URL,
             params={"symbol": symbol, "token": api_key},
-            timeout=10,
         )
-        response.raise_for_status()
         data = response.json()
     except requests.RequestException:
         logger.exception("Failed to fetch stock quote for %s", symbol)

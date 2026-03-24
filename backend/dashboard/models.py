@@ -146,3 +146,5 @@ class NewsHeadline(models.Model):
 
     def __str__(self):
         return f"{self.source_name}: {self.title[:80]}"
+
+

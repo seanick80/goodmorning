@@ -6,9 +6,9 @@ A full-stack web dashboard designed for a tablet display in a living room. Shows
 
 ## Tech Stack
 
-- **Backend:** Django 5.x + Django REST Framework
-- **Frontend:** React 19 + Vite
-- **Database:** SQLite (local dev), PostgreSQL (Pi/cloud deployments)
+- **Backend:** Django 6.0 + Django REST Framework
+- **Frontend:** React 19 + Vite + TypeScript
+- **Database:** PostgreSQL 16 via Docker (SQLite fallback for offline dev)
 - **Scheduler:** django-apscheduler for periodic data fetching
 - **Styling:** CSS Modules, dark gradient theme with glass-morphism cards
 
@@ -28,13 +28,35 @@ Uses a **Hero layout** (60/40 split):
 - **Left panel:** Clock (multi-timezone: primary + 2 aux) and Weather
 - **Right panel:** Stocks, Calendar, and News stacked vertically
 
-## Quick Start (Local Windows Development)
+## Quick Start
 
 ### Prerequisites
-- Python 3.11+
-- Node.js 18+
+- Docker Desktop (for PostgreSQL)
+- Python 3.12+
+- Node.js 20+
 
-### Backend Setup
+### One-command setup
+
+```bash
+./deploy.sh
+```
+
+This starts Docker, installs all dependencies, runs migrations, seeds sample data, and launches all dev servers.
+
+Other deploy commands:
+
+```bash
+./deploy.sh --services   # Start PostgreSQL via Docker
+./deploy.sh --backend    # Install Python deps, migrate, seed
+./deploy.sh --frontend   # npm install
+./deploy.sh --start      # Launch all dev servers
+./deploy.sh --stop       # Stop all dev servers
+./deploy.sh --test       # Start services + run pytest
+```
+
+### Manual setup
+
+**Backend:**
 ```bash
 cd backend
 python -m venv .venv
@@ -46,25 +68,28 @@ python manage.py seed_data       # Creates admin user + sample data
 python manage.py runserver
 ```
 
-### Frontend Setup
+**Frontend:**
 ```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173 to view the dashboard.
-
-### Run the Scheduler (optional, for live data)
+**Scheduler (optional, for live data):**
 ```bash
 cd backend
 source .venv/Scripts/activate
 python manage.py run_scheduler
 ```
 
+After startup:
+- **Dashboard:** http://localhost:5173
+- **API:** http://localhost:8000/api/
+- **Admin:** http://localhost:8000/admin/ (admin / admin)
+
 ### Run Tests
 ```bash
-# Backend (55 tests)
+# Backend (67 tests) — requires PostgreSQL running
 cd backend
 source .venv/Scripts/activate
 python -m pytest -v
@@ -82,20 +107,23 @@ Copy `backend/.env.example` to `backend/.env` and configure:
 |----------|----------|-------------|
 | `SECRET_KEY` | Yes | Django secret key |
 | `DEBUG` | No | Default: True |
+| `DATABASE_URL` | No | Default: SQLite. Set to `postgres://...` for PostgreSQL |
 | `FINNHUB_API_KEY` | For stocks | Free at finnhub.io |
+| `USER_CALENDAR` | For calendar | ICS feed URL (Google/Outlook/iCloud) |
 | `WEATHER_LAT` | No | Latitude (default: 40.7128 / NYC) |
 | `WEATHER_LON` | No | Longitude (default: -74.0060 / NYC) |
-| `DATABASE_URL` | No | Default: SQLite. Set to `postgres://...` for PostgreSQL |
 
 ## API Endpoints
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/api/weather/` | GET | Cached weather data |
+| `/api/weather/location/` | POST | Update weather location |
 | `/api/stocks/` | GET | Cached stock quotes |
 | `/api/calendar/` | GET | Today's calendar events |
 | `/api/news/` | GET | Recent news headlines |
 | `/api/dashboard/` | GET, PATCH | User dashboard configuration |
+| `/api/geocode/` | GET | City search for location picker |
 
 ## Project Structure
 
@@ -106,7 +134,8 @@ goodmorning/
     dashboard/        # Main Django app
       models.py       # UserDashboard, WeatherCache, StockQuote, CalendarEvent, NewsHeadline
       views.py        # DRF API views
-      services/       # External API integrations (weather, stocks, calendar, news)
+      serializers.py  # DRF serializers
+      services/       # External API integrations (weather, stocks, calendar, news, geocode)
       jobs.py         # Scheduler job definitions
       tests/          # pytest test suite
     manage.py
@@ -118,24 +147,21 @@ goodmorning/
         widgets/      # ClockWidget, WeatherWidget, StocksWidget, CalendarWidget, NewsWidget
         mocks/        # UI layout and widget design mockups
         Dashboard.jsx # Main Hero layout
-  FRAMEWORK_ANALYSIS.md   # Architecture decisions
-  STORAGE_ANALYSIS.md     # Database and persistence decisions
-  EXECUTION_PLAN.md       # Full implementation plan
+  docker-compose.yml  # PostgreSQL 16
+  deploy.sh           # One-command bootstrap & startup
 ```
 
 ## Deployment Targets
 
 | Target | Database | Status |
 |--------|----------|--------|
-| Local Windows | SQLite | Working |
-| Docker + ARM emulation | PostgreSQL | Planned |
+| Local Windows + Docker | PostgreSQL 16 | Working |
 | Raspberry Pi | PostgreSQL (tuned) | Planned |
 | Cloud (Render/Railway) | PostgreSQL (managed) | Planned |
 
 ## Future Work
 
 - Google Account integration (OAuth, Calendar API)
-- Docker Compose deployment
 - Raspberry Pi deployment with tuned PostgreSQL
 - PWA support (tablet home screen install)
 - Theme customization (dark/light modes)

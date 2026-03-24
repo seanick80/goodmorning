@@ -1,7 +1,13 @@
 """Open-Meteo API client for weather data."""
 
-import requests
+from __future__ import annotations
+
+import logging
 from datetime import datetime
+
+from ._http import fetch_with_retry
+
+logger = logging.getLogger(__name__)
 
 OPEN_METEO_URL = "https://api.open-meteo.com/v1/forecast"
 
@@ -53,8 +59,7 @@ def fetch_weather_data(latitude: float, longitude: float, units: str = "fahrenhe
         "forecast_days": 1,
         "timezone": "auto",
     }
-    response = requests.get(OPEN_METEO_URL, params=params, timeout=10)
-    response.raise_for_status()
+    response = fetch_with_retry(OPEN_METEO_URL, params=params)
     data = response.json()
 
     current = data["current"]

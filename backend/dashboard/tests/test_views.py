@@ -40,6 +40,36 @@ class TestWeatherView:
         assert "temperature" in data
         assert "weather_description" in data
 
+    def test_returns_weather_for_configured_location(self, api_client):
+        """When a superuser has a weather widget configured, the view returns
+        the cache entry matching that location and includes location_name."""
+        user = UserFactory(is_superuser=True, username="admin")
+        UserDashboardFactory(
+            user=user,
+            widget_layout=[
+                {
+                    "widget": "weather",
+                    "enabled": True,
+                    "position": 0,
+                    "settings": {
+                        "latitude": -42.88,
+                        "longitude": 147.33,
+                        "location_name": "Hobart",
+                    },
+                },
+            ],
+        )
+        # Cache entry that matches the dashboard config
+        WeatherCacheFactory(location_key="-42.88,147.33", latitude=-42.88, longitude=147.33)
+        # A different location that should NOT be returned
+        WeatherCacheFactory(location_key="40.71,-74.01")
+
+        response = api_client.get("/api/weather/")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["location_key"] == "-42.88,147.33"
+        assert data["location_name"] == "Hobart"
+
     def test_returns_404_when_no_cache_exists(self, api_client):
         response = api_client.get("/api/weather/")
         assert response.status_code == 404
@@ -101,6 +131,32 @@ class TestStocksView:
         assert len(data) == 3
         symbols = [q["symbol"] for q in data]
         assert symbols == ["AAPL", "GOOG", "MSFT"]
+
+    def test_filters_by_configured_symbols(self, api_client):
+        """When a superuser has a stocks widget with specific symbols,
+        the view only returns quotes for those symbols."""
+        user = UserFactory(is_superuser=True, username="admin")
+        UserDashboardFactory(
+            user=user,
+            widget_layout=[
+                {
+                    "widget": "stocks",
+                    "enabled": True,
+                    "position": 0,
+                    "settings": {"symbols": ["AAPL", "GOOG"]},
+                },
+            ],
+        )
+        StockQuoteFactory(symbol="AAPL")
+        StockQuoteFactory(symbol="GOOG")
+        StockQuoteFactory(symbol="MSFT")  # not in config — should be excluded
+
+        response = api_client.get("/api/stocks/")
+        assert response.status_code == 200
+        data = response.json()
+        symbols = [q["symbol"] for q in data]
+        assert symbols == ["AAPL", "GOOG"]
+        assert "MSFT" not in symbols
 
     def test_returns_empty_list_when_no_data(self, api_client):
         response = api_client.get("/api/stocks/")

@@ -2,7 +2,13 @@
 
 from rest_framework import serializers
 
-from .models import CalendarEvent, NewsHeadline, StockQuote, UserDashboard, WeatherCache
+from .models import (
+    CalendarEvent,
+    NewsHeadline,
+    StockQuote,
+    UserDashboard,
+    WeatherCache,
+)
 
 
 class WeatherCacheSerializer(serializers.ModelSerializer):
@@ -55,3 +61,5 @@ class UserDashboardSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserDashboard
         fields = ["widget_layout"]
+
+

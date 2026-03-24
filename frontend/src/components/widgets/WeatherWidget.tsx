@@ -1,8 +1,58 @@
 import { useWeather } from "../../hooks/useWeather";
 import WidgetCard from "../WidgetCard";
+import LocationSelector from "./LocationSelector";
 import styles from "./WeatherWidget.module.css";
 
-function weatherEmoji(code) {
+/** WMO Weather Interpretation Codes — discriminated by numeric range. */
+type WmoCodeClear = 0;
+type WmoCodeCloudy = 1 | 2 | 3;
+type WmoCodeFog = 45 | 48;
+type WmoCodeDrizzle = 51 | 53 | 55;
+type WmoCodeRain = 61 | 63 | 65;
+type WmoCodeSnow = 71 | 73 | 75;
+type WmoCodeShowers = 80 | 81 | 82;
+type WmoCodeSnowShowers = 85 | 86;
+type WmoCodeThunderstorm = 95 | 96 | 99;
+
+type WmoCode =
+  | WmoCodeClear
+  | WmoCodeCloudy
+  | WmoCodeFog
+  | WmoCodeDrizzle
+  | WmoCodeRain
+  | WmoCodeSnow
+  | WmoCodeShowers
+  | WmoCodeSnowShowers
+  | WmoCodeThunderstorm;
+
+interface HourlyForecast {
+  time: string;
+  temp: number;
+  weather_code: number;
+  code?: number;
+  precip_prob: number | null;
+}
+
+interface WeatherData {
+  location_name?: string;
+  temperature: number;
+  temperature_unit: "fahrenheit" | "celsius";
+  feels_like: number | null;
+  humidity: number | null;
+  wind_speed: number | null;
+  wind_direction: number | null;
+  weather_code: number;
+  weather_description?: string;
+  precipitation_probability: number | null;
+  sunrise: string | null;
+  sunset: string | null;
+  daily_high: number | null;
+  daily_low: number | null;
+  hourly_forecast: HourlyForecast[];
+  fetched_at: string;
+}
+
+function weatherEmoji(code: number): string {
   if (code === 0) return "\u2600\uFE0F";
   if (code <= 3) return "\u26C5";
   if (code <= 49) return "\uD83C\uDF2B\uFE0F";
@@ -15,7 +65,7 @@ function weatherEmoji(code) {
   return "\uD83C\uDF24\uFE0F";
 }
 
-function formatHour(timeStr) {
+function formatHour(timeStr: string | undefined): string {
   if (!timeStr) return "";
   try {
     const d = new Date(timeStr);
@@ -25,7 +75,7 @@ function formatHour(timeStr) {
   }
 }
 
-function formatTime12(timeStr) {
+function formatTime12(timeStr: string | null): string {
   if (!timeStr) return "";
   try {
     // Handle "HH:MM:SS" time-only strings by prepending today's date
@@ -52,13 +102,13 @@ export default function WeatherWidget() {
       <WidgetCard title="Weather">
         <div className={styles.error}>
           Unable to load weather data
-          {error?.status === 404 && " (no data yet)"}
+          {(error as { status?: number })?.status === 404 && " (no data yet)"}
         </div>
       </WidgetCard>
     );
   }
 
-  const weather = Array.isArray(data) ? data[0] : data;
+  const weather: WeatherData | undefined = Array.isArray(data) ? data[0] : data;
 
   if (!weather) {
     return (
@@ -69,7 +119,7 @@ export default function WeatherWidget() {
   }
 
   const unit = weather.temperature_unit === "celsius" ? "\u00B0C" : "\u00B0F";
-  const forecast = weather.hourly_forecast || [];
+  const forecast: HourlyForecast[] = weather.hourly_forecast || [];
   // Show next 6 hours from current time
   const now = new Date();
   const upcomingForecast = forecast
@@ -80,7 +130,7 @@ export default function WeatherWidget() {
     upcomingForecast.length > 0 ? upcomingForecast : forecast.slice(-6);
 
   return (
-    <WidgetCard title={weather.location_name || "Weather"}>
+    <WidgetCard title={weather.location_name || "Weather"} titleExtra={<LocationSelector />}>
       <div className={styles.current}>
         <span className={styles.emoji}>
           {weatherEmoji(weather.weather_code)}

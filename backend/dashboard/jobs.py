@@ -21,6 +21,8 @@ from dashboard.services.weather import fetch_weather_data
 logger = logging.getLogger(__name__)
 
 
+# TODO: Change this to use Celery instead of APScheduler.
+
 def fetch_weather():
     """Fetch weather for all configured locations."""
     dashboards = UserDashboard.objects.all()
