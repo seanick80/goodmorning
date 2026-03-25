@@ -1,0 +1,25 @@
+[Unit]
+Description=Good Morning Dashboard — gunicorn
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=notify
+User=goodmorning
+Group=goodmorning
+WorkingDirectory=/opt/goodmorning/backend
+Environment=DJANGO_SETTINGS_MODULE=config.settings
+ExecStart=/opt/goodmorning/backend/.venv/bin/gunicorn \
+    config.wsgi:application \
+    --bind 127.0.0.1:8000 \
+    --workers 2 \
+    --timeout 30 \
+    --access-logfile - \
+    --error-logfile -
+ExecReload=/bin/kill -s HUP $MAINPID
+Restart=always
+RestartSec=5
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target

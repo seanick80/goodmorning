@@ -1,0 +1,18 @@
+[Unit]
+Description=Good Morning Dashboard — APScheduler
+After=network.target postgresql.service goodmorning-web.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=goodmorning
+Group=goodmorning
+WorkingDirectory=/opt/goodmorning/backend
+Environment=DJANGO_SETTINGS_MODULE=config.settings
+ExecStart=/opt/goodmorning/backend/.venv/bin/python \
+    manage.py run_scheduler
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
