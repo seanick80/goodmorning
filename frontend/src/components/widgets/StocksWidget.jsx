@@ -1,4 +1,5 @@
 import { useStocks } from "../../hooks/useStocks";
+import StaleIndicator from "../StaleIndicator";
 import WidgetCard from "../WidgetCard";
 import styles from "./StocksWidget.module.css";
 
@@ -24,7 +25,7 @@ export default function StocksWidget() {
   const stocks = Array.isArray(data) ? data : [];
 
   return (
-    <WidgetCard title="Stocks">
+    <WidgetCard title="Stocks" titleExtra={<StaleIndicator fetchedAt={stocks[0]?.fetched_at} />}>
       {stocks.map((stock) => {
         const change = parseFloat(stock.change);
         const isUp = change >= 0;

@@ -1,4 +1,5 @@
 import { useWeather } from "../../hooks/useWeather";
+import StaleIndicator from "../StaleIndicator";
 import WidgetCard from "../WidgetCard";
 import LocationSelector from "./LocationSelector";
 import styles from "./WeatherWidget.module.css";
@@ -130,7 +131,7 @@ export default function WeatherWidget() {
     upcomingForecast.length > 0 ? upcomingForecast : forecast.slice(-6);
 
   return (
-    <WidgetCard title={weather.location_name || "Weather"} titleExtra={<LocationSelector />}>
+    <WidgetCard title={weather.location_name || "Weather"} titleExtra={<><StaleIndicator fetchedAt={weather.fetched_at} /><LocationSelector /></>}>
       <div className={styles.current}>
         <span className={styles.emoji}>
           {weatherEmoji(weather.weather_code)}

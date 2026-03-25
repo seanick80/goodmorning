@@ -1,4 +1,5 @@
 import { useCalendar } from "../../hooks/useCalendar";
+import StaleIndicator from "../StaleIndicator";
 import WidgetCard from "../WidgetCard";
 import styles from "./CalendarWidget.module.css";
 
@@ -45,7 +46,7 @@ export default function CalendarWidget() {
   }
 
   return (
-    <WidgetCard title="Today's Schedule">
+    <WidgetCard title="Today's Schedule" titleExtra={<StaleIndicator fetchedAt={events[0]?.fetched_at} />}>
       {events.map((event, i) => (
         <div key={i} className={styles.event}>
           <span className={styles.time}>

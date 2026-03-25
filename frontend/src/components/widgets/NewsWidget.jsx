@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNews } from "../../hooks/useNews";
+import StaleIndicator from "../StaleIndicator";
 import WidgetCard from "../WidgetCard";
 import styles from "./NewsWidget.module.css";
 
@@ -84,7 +85,7 @@ export default function NewsWidget() {
   };
 
   return (
-    <WidgetCard title="News">
+    <WidgetCard title="News" titleExtra={<StaleIndicator fetchedAt={headlines[0]?.fetched_at} />}>
       <div className={`${styles.headline} ${visible ? styles.visible : styles.hidden}`}>
         {headline.link ? (
           <a
