@@ -10,6 +10,9 @@ backend/db.sqlite3
 backend/logs/
 backend/.env
 
+# Production secrets
+pi/.env.production
+
 # Node
 node_modules/
 frontend/dist/

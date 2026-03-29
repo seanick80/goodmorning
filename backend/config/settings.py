@@ -116,10 +116,12 @@ REST_FRAMEWORK = {
     "DATETIME_FORMAT": "%Y-%m-%dT%H:%M:%S%z",
 }
 
-# CORS (Vite dev server)
+# CORS (Vite dev server + Pi kiosk)
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "http://127.0.0.1:5173",
+    "http://goodmorning.local",
+    "http://goodmorning.local:80",
 ]
 CORS_ALLOW_CREDENTIALS = True
 

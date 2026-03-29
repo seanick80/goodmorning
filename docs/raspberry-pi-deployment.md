@@ -102,12 +102,35 @@ Comfortable margin. No swap needed under normal operation.
 
 ### Phase 1: Prepare the SD card (on dev machine)
 
-1. Flash Raspberry Pi OS Lite (64-bit) using Raspberry Pi Imager
-2. In Imager advanced settings:
-   - Enable SSH (password or key)
-   - Set hostname: `goodmorning.local`
-   - Configure Wi-Fi credentials
-   - Set username/password
+1. Flash Raspberry Pi OS (64-bit) using Raspberry Pi Imager (Lite recommended, full desktop also works)
+2. Mount the boot partition (FAT32, visible as a drive on Windows)
+3. Create a `custom.toml` on the boot partition for headless first-boot configuration:
+   ```toml
+   [system]
+   hostname = "goodmorning"
+
+   [user]
+   name = "pi"
+   password = "<encrypted password hash>"
+   password_encrypted = true
+
+   [ssh]
+   enabled = true
+   password_authentication = true
+
+   [wlan]
+   ssid = "<your Wi-Fi SSID>"
+   password = "<your Wi-Fi password>"
+   password_encrypted = false
+   country = "<2-letter country code>"
+
+   [locale]
+   timezone = "<timezone e.g. Australia/Hobart>"
+   keymap = "us"
+   ```
+4. Create an empty `ssh` file on the boot partition (enables SSH on first boot)
+5. Optionally back up the original `config.txt` and `cmdline.txt` before any modifications
+6. Populate `pi/.env.production` with real secrets (SECRET_KEY, API keys, calendar URL, coordinates) — this file is gitignored and must be configured manually
 
 ### Phase 2: First boot setup (via SSH from dev machine)
 

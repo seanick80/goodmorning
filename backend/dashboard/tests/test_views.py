@@ -233,3 +233,29 @@ class TestNewsView:
         response = api_client.get("/api/news/")
         assert response.status_code == 200
         assert len(response.json()) == 20
+
+
+@pytest.mark.django_db()
+class TestCORSConfiguration:
+    """Verify CORS allows Pi kiosk origin alongside dev server."""
+
+    def test_cors_allows_pi_kiosk_origin(self, api_client):
+        response = api_client.get(
+            "/api/weather/",
+            HTTP_ORIGIN="http://goodmorning.local",
+        )
+        assert response.get("Access-Control-Allow-Origin") == "http://goodmorning.local"
+
+    def test_cors_allows_dev_origin(self, api_client):
+        response = api_client.get(
+            "/api/weather/",
+            HTTP_ORIGIN="http://localhost:5173",
+        )
+        assert response.get("Access-Control-Allow-Origin") == "http://localhost:5173"
+
+    def test_cors_rejects_unknown_origin(self, api_client):
+        response = api_client.get(
+            "/api/weather/",
+            HTTP_ORIGIN="http://evil.example.com",
+        )
+        assert response.get("Access-Control-Allow-Origin") is None

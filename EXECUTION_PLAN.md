@@ -2202,7 +2202,37 @@ See Section 11 above.
 | Photo slideshow | Local folder or Google Photos API | Medium (see details below) |
 | Reminders/to-do | Google Tasks API or local model | Low |
 | System status | psutil (CPU, RAM, disk) | Low |
+| Dexcom glucose | pydexcom (Dexcom Share API, no dev account needed) | Medium (see details below) |
 | Cryptocurrency | CoinGecko API (free, no key) | Low |
+
+### Dexcom Glucose Monitor Widget
+
+Display real-time CGM (continuous glucose monitor) readings from a Dexcom sensor on the dashboard.
+
+**Library:** `pydexcom` (`pip install pydexcom`, v0.5.1, actively maintained, used by Home Assistant)
+
+**How it works:**
+- Uses Dexcom's reverse-engineered Share API — NOT the official developer API
+- Only needs the user's regular Dexcom app credentials (email + password)
+- Share must be enabled in the Dexcom app (at least one follower added)
+- Auto-handles session refresh, no manual token management
+
+**Backend:**
+- `GlucoseReading` model: value (mg/dL), mmol_l, trend_direction, trend_arrow, recorded_at
+- `services/glucose.py`: pydexcom client wrapper
+- APScheduler job: **5-minute interval** (matches CGM reading frequency)
+- `GET /api/glucose/` — latest reading + last 3 hours for sparkline
+
+**Frontend:**
+- Large glucose number, color-coded (green 70-180, yellow 55-70/180-250, red <55/>250)
+- Unicode trend arrow (↗ ↑ → ↘ ↓)
+- Mini sparkline of last 3 hours
+- Stale indicator if reading >15 minutes old
+- Configurable label (e.g. "Lizzii's Glucose")
+
+**Caveats:**
+- Share API is undocumented — could break if Dexcom changes their backend (has been stable for years)
+- Fallback: Nightscout (self-hosted Node.js middleware) if Share API is blocked
 
 ### Photo Slideshow Mode
 
