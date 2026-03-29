@@ -128,6 +128,32 @@ sudo chown -R goodmorning:goodmorning /opt/goodmorning/
 
 ---
 
+## Issue 11: Kiosk service crash loop on full desktop image
+
+**Symptom:** Screen flashes every ~5 seconds. `journalctl -u goodmorning-kiosk` shows `Missing X server or $DISPLAY` and `Opening in existing browser session` in a restart loop.
+
+**Cause:** The `goodmorning-kiosk.service` launches Chromium as the `goodmorning` system user via cage (Wayland compositor). On a full desktop image, the `pi` user is already logged into the desktop with its own display session. The `goodmorning` user has no display access, so Chromium either fails (`Missing X server`) or opens a tab in the `pi` user's existing Chromium session (which immediately exits, triggering systemd restart).
+
+**Fix for full desktop image:** Disable the kiosk systemd service and use a desktop autostart entry instead:
+```bash
+sudo systemctl stop goodmorning-kiosk
+sudo systemctl disable goodmorning-kiosk
+
+mkdir -p ~/.config/autostart
+cat > ~/.config/autostart/goodmorning-kiosk.desktop << 'EOF'
+[Desktop Entry]
+Type=Application
+Name=Good Morning Dashboard
+Exec=chromium-browser --kiosk --noerrdialogs --disable-translate --no-first-run --disable-infobars --disable-session-crashed-bubble --disable-features=TranslateUI --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --password-store=basic http://localhost
+Hidden=false
+X-GNOME-Autostart-enabled=true
+EOF
+```
+
+**Note:** The cage + systemd kiosk approach is correct for Pi OS Lite (no desktop). On a full desktop image, use the XDG autostart `.desktop` file approach instead. Both achieve the same result — Chromium fullscreen on boot.
+
+---
+
 ## Updated first-boot sequence
 
 1. Flash Raspberry Pi OS (64-bit) — Lite or Desktop

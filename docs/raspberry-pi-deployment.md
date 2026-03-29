@@ -443,3 +443,14 @@ rm -rf ~/.ssh
 mkdir -p ~/.ssh && chmod 700 ~/.ssh
 ```
 Then re-run `goodmorning-setup.sh`.
+
+### Kiosk mode flashes/restarts on full desktop image
+
+The `goodmorning-kiosk.service` uses cage (Wayland compositor) which conflicts with the desktop session on a full Pi OS image. Disable the service and use a desktop autostart entry instead:
+```bash
+sudo systemctl stop goodmorning-kiosk
+sudo systemctl disable goodmorning-kiosk
+mkdir -p ~/.config/autostart
+# Create ~/.config/autostart/goodmorning-kiosk.desktop (see pi-setup-notes.md for contents)
+```
+The cage approach works correctly on Pi OS Lite (no desktop environment).

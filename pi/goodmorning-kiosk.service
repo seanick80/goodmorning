@@ -24,6 +24,7 @@ ExecStart=/usr/bin/chromium-browser \
     --disable-features=TranslateUI \
     --check-for-update-interval=31536000 \
     --autoplay-policy=no-user-gesture-required \
+    --password-store=basic \
     http://localhost
 
 Restart=always

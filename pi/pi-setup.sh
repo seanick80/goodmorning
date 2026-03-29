@@ -187,6 +187,7 @@ if [ \"\$(tty)\" = \"/dev/tty1\" ]; then
         --disable-features=TranslateUI \\
         --check-for-update-interval=31536000 \\
         --autoplay-policy=no-user-gesture-required \\
+        --password-store=basic \\
         http://localhost
 fi
 PROFILE
