@@ -7,6 +7,10 @@
 - microSD card (32 GB+)
 - Connected to local Wi-Fi
 
+### Python Compatibility
+
+Raspberry Pi OS Bookworm ships Python 3.11.2. Django 5.2 LTS is used (not 6.0) for compatibility. The `psycopg-binary` package has no ARM wheel, so `requirements.txt` uses a platform marker to install it only on x86_64; on ARM, the pure-Python `psycopg` driver is used instead.
+
 ## Goals
 
 1. **Initial setup** — flash SD card, run one script, dashboard is live
@@ -102,9 +106,9 @@ Comfortable margin. No swap needed under normal operation.
 
 ### Phase 1: Prepare the SD card (on dev machine)
 
-1. Flash Raspberry Pi OS (64-bit) using Raspberry Pi Imager (Lite recommended, full desktop also works)
-2. Mount the boot partition (FAT32, visible as a drive on Windows)
-3. Create a `custom.toml` on the boot partition for headless first-boot configuration:
+1. Flash Raspberry Pi OS (64-bit) using Raspberry Pi Imager (Lite recommended, full desktop also works — desktop uses ~200-400 MB more RAM but is fine on 4 GB)
+2. Mount the boot partition (FAT32, visible as a drive letter on Windows)
+3. Create a `custom.toml` on the boot partition for first-boot configuration:
    ```toml
    [system]
    hostname = "goodmorning"
@@ -129,18 +133,47 @@ Comfortable margin. No swap needed under normal operation.
    keymap = "us"
    ```
 4. Create an empty `ssh` file on the boot partition (enables SSH on first boot)
-5. Optionally back up the original `config.txt` and `cmdline.txt` before any modifications
-6. Populate `pi/.env.production` with real secrets (SECRET_KEY, API keys, calendar URL, coordinates) — this file is gitignored and must be configured manually
+5. Copy `pi/goodmorning-setup.sh` to the boot partition (SSH fix + key install)
+6. Generate an SSH key on the dev machine if you don't have one: `ssh-keygen -t ed25519`
+7. Edit `goodmorning-setup.sh` to include your public key from `~/.ssh/id_ed25519.pub`
+8. Back up original `config.txt` and `cmdline.txt` (optional, nothing is modified)
+9. Populate `pi/.env.production` with real secrets (SECRET_KEY, API keys, calendar URL, coordinates) — this file is gitignored and must be configured manually
 
-### Phase 2: First boot setup (via SSH from dev machine)
+### Phase 2: First boot (HDMI + USB keyboard required)
+
+The `custom.toml` password hash may not be applied on all Pi OS images (especially full desktop). An HDMI display and USB keyboard are needed for the first boot to fix SSH access.
+
+1. Insert the SD card and power on the Pi
+2. Wait for it to boot and connect to Wi-Fi (hostname and Wi-Fi from `custom.toml` do work)
+3. On the Pi terminal, set the `pi` user password (required — SSH is blocked until this is done):
+   ```
+   sudo passwd pi
+   ```
+4. Remove the SSH security block that prevents login when the default password is unchanged:
+   ```
+   sudo rm -f /etc/ssh/sshd_config.d/rename_user.conf
+   ```
+5. Run the setup script to configure SSH key auth:
+   ```
+   sudo bash /boot/firmware/goodmorning-setup.sh
+   ```
+6. From the dev machine, verify SSH works:
+   ```
+   ssh pi@goodmorning.local
+   ```
+
+**Why this is needed:** Raspberry Pi OS (Bookworm+) blocks all SSH authentication — including public key — until the default password is changed. The `rename_user.conf` drop-in in `/etc/ssh/sshd_config.d/` enforces this. Simply adding an SSH key is not enough.
+
+### Phase 3: Application setup (via SSH from dev machine)
 
 A single `pi-setup.sh` script runs on the Pi (pushed via SSH or curl) that:
 
 1. **System packages:**
    ```
-   apt update && apt upgrade
-   apt install python3 python3-venv postgresql nginx chromium-browser
+   apt-get update
+   apt-get install python3 python3-venv python3-dev postgresql postgresql-client nginx chromium-browser cage libpq-dev gcc curl
    ```
+   **Note:** `apt-get upgrade` is intentionally omitted. On a full desktop image it takes 15+ minutes and can timeout SSH connections. Run it manually before deploying if desired.
 
 2. **PostgreSQL:**
    - Create `goodmorning` database and user
@@ -203,7 +236,7 @@ Dev machine                              Raspberry Pi
 
 ### Key design decisions
 
-- **rsync over SSH** — fast incremental sync, only changed files transfer
+- **rsync over SSH** — fast incremental sync, only changed files transfer. **Note:** rsync is not available in Git Bash on Windows. Install it via MSYS2/pacman (`pacman -S rsync`), use WSL, or use the `scp`+`tar` fallback built into `deploy-pi.sh`
 - **Frontend built on dev machine** — Pi doesn't need Node.js installed (saves ~200 MB + build time)
 - **No downtime** — gunicorn restarts gracefully (workers finish current requests)
 - **Health check** — script waits for the API to respond before reporting success
@@ -347,3 +380,66 @@ Django file-based logs are also at `/opt/goodmorning/backend/logs/` and can be r
 | Wi-Fi resilience | Display cached data; show a red stale-data icon per widget when `fetched_at` is >20 minutes old. |
 | Multiple Pis | Single Pi — no parameterization needed. Hostname hardcoded to `goodmorning.local`. |
 | Log access | SSH + journalctl. Django file logs also available at `/opt/goodmorning/backend/logs/`. |
+
+---
+
+## Troubleshooting
+
+Common issues encountered during the first real deployment. See also `docs/pi-setup-notes.md` for detailed root cause analysis.
+
+### SSH rejected — "Permission denied" for all auth methods
+
+Raspberry Pi OS Bookworm+ includes `/etc/ssh/sshd_config.d/rename_user.conf` which blocks ALL SSH authentication (including pubkey) until the default password is changed. Fix on the Pi terminal (HDMI + keyboard required):
+
+```bash
+sudo passwd pi
+sudo rm -f /etc/ssh/sshd_config.d/rename_user.conf
+sudo systemctl reload ssh
+```
+
+### `custom.toml` password not applied
+
+The full desktop Pi OS image may skip the password hash from `custom.toml` (hostname, Wi-Fi, and locale do work). Set password manually on first boot: `sudo passwd pi`.
+
+### `pip install` fails with "No matching distribution for Django==6.0"
+
+Pi OS Bookworm ships Python 3.11.2. Django 6.0 requires Python 3.12+. The project uses Django 5.2 LTS for Pi compatibility.
+
+### `pip install psycopg-binary` fails on ARM
+
+No prebuilt ARM wheel exists. The `requirements.txt` uses a platform marker to skip `psycopg-binary` on ARM. The pure-Python `psycopg` driver works on all platforms.
+
+### Bash scripts fail with `$'\r': command not found`
+
+Windows CRLF line endings. Fix before running on Pi:
+```bash
+sed -i 's/\r$//' /opt/goodmorning/pi/*.sh
+```
+The project `.gitattributes` enforces LF endings for `.sh` files, but this only works if the file was checked out after the `.gitattributes` was added.
+
+### `rsync: command not found` in Git Bash on Windows
+
+Git Bash on Windows does not include rsync. Options:
+1. Install rsync via MSYS2: `pacman -S rsync`
+2. Use WSL for the deploy script
+3. Use `scp` + `tar` for initial deploy: `tar czf - backend/ | ssh pi@goodmorning.local 'tar xzf - -C /opt/goodmorning/'`
+
+### `apt-get upgrade` times out over SSH
+
+Full desktop image has hundreds of packages. Run upgrade manually on the Pi terminal instead of over SSH, or use `screen`/`tmux` to survive disconnects.
+
+### File ownership issues after deploy
+
+`pi-setup.sh` creates `/opt/goodmorning/` owned by the `goodmorning` user, but `deploy-pi.sh` copies files as the `pi` user via SSH. After initial deploy, fix ownership:
+```bash
+sudo chown -R goodmorning:goodmorning /opt/goodmorning/
+```
+
+### Corrupted `.ssh` directory
+
+If SSH key installation created directories with special characters (encoding issues from terminal copy-paste), remove and recreate:
+```bash
+rm -rf ~/.ssh
+mkdir -p ~/.ssh && chmod 700 ~/.ssh
+```
+Then re-run `goodmorning-setup.sh`.

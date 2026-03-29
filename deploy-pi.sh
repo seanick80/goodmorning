@@ -9,7 +9,12 @@
 #   ./deploy-pi.sh --setup            First deploy: push everything + install configs
 #   ./deploy-pi.sh --status           Show Pi health check
 #
-# Prerequisites: SSH key auth to goodmorning.local
+# Prerequisites:
+#   - SSH key auth to goodmorning.local
+#   - rsync (not included in Git Bash on Windows — install via MSYS2 `pacman -S rsync`,
+#     or run this script from WSL). For initial deploy without rsync, use scp+tar:
+#       tar czf - backend/ frontend/dist/ pi/ | ssh goodmorning@goodmorning.local \
+#         'tar xzf - -C /opt/goodmorning/'
 
 set -euo pipefail
 
@@ -58,6 +63,13 @@ if ! ssh -o ConnectTimeout=5 "$PI_USER@$PI_HOST" true 2>/dev/null; then
     fail "Cannot reach $PI_USER@$PI_HOST via SSH. Is the Pi on the network?"
 fi
 ok "SSH connected."
+
+# -------------------------------------------------------------------
+# Check rsync availability
+# -------------------------------------------------------------------
+if ! command -v rsync &>/dev/null; then
+    fail "rsync not found. On Windows Git Bash, install via MSYS2 (pacman -S rsync) or run from WSL."
+fi
 
 # -------------------------------------------------------------------
 # Build frontend

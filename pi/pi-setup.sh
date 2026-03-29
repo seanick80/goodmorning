@@ -31,9 +31,11 @@ fi
 # -------------------------------------------------------------------
 # 1. System packages
 # -------------------------------------------------------------------
-info "Updating system packages..."
+info "Updating package index..."
 apt-get update -qq
-apt-get upgrade -y -qq
+# Note: apt-get upgrade is intentionally skipped here. On a full desktop
+# image it can take 15+ minutes and timeout SSH connections. Run it
+# manually before deploying if desired: sudo apt-get upgrade -y
 
 info "Installing dependencies..."
 apt-get install -y -qq \
@@ -217,9 +219,23 @@ fi
 # 11. SSH hardening
 # -------------------------------------------------------------------
 info "Hardening SSH..."
+
+# Remove the Raspberry Pi OS SSH block that prevents all auth (including
+# pubkey) when the default password is unchanged. This drop-in file is
+# present on Bookworm+ images and must be removed for SSH to work.
+rm -f /etc/ssh/sshd_config.d/rename_user.conf
+
+# Ensure pubkey auth is enabled (some Pi OS images disable it by default)
+sed -i 's/^#\?PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+for f in /etc/ssh/sshd_config.d/*.conf; do
+    [ -f "$f" ] && sed -i 's/^PubkeyAuthentication no/PubkeyAuthentication yes/' "$f"
+done
+
+# Disable password auth (key-only from here on)
 sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+
 systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
-ok "SSH hardened (key auth only)."
+ok "SSH hardened (key auth only, rename_user.conf removed)."
 
 # -------------------------------------------------------------------
 # Done
