@@ -9,7 +9,14 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from django_apscheduler.jobstores import DjangoJobStore
 
-from dashboard.jobs import fetch_calendar, fetch_news, fetch_stocks, fetch_weather
+from dashboard.jobs import (
+    fetch_calendar,
+    fetch_google_calendar,
+    fetch_google_photos,
+    fetch_news,
+    fetch_stocks,
+    fetch_weather,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -49,6 +56,22 @@ class Command(BaseCommand):
             fetch_news,
             trigger=IntervalTrigger(minutes=60),
             id="fetch_news",
+            max_instances=1,
+            replace_existing=True,
+        )
+
+        scheduler.add_job(
+            fetch_google_calendar,
+            trigger=IntervalTrigger(minutes=30),
+            id="fetch_google_calendar",
+            max_instances=1,
+            replace_existing=True,
+        )
+
+        scheduler.add_job(
+            fetch_google_photos,
+            trigger=IntervalTrigger(minutes=60),
+            id="fetch_google_photos",
             max_instances=1,
             replace_existing=True,
         )

@@ -148,3 +148,115 @@ def fetch_news() -> None:
     deleted, _ = NewsHeadline.objects.filter(fetched_at__lt=cutoff).delete()
     if deleted:
         logger.info("Purged %d old news headlines", deleted)
+
+
+def fetch_google_calendar() -> None:
+    """Fetch calendar events via Google Calendar API for connected users."""
+    from allauth.socialaccount.models import SocialAccount
+
+    from dashboard.services.google_api import fetch_google_calendar_events
+
+    google_users = SocialAccount.objects.filter(
+        provider="google",
+    ).select_related("user")
+
+    for social_account in google_users:
+        user = social_account.user
+        try:
+            dashboard = user.dashboard
+        except UserDashboard.DoesNotExist:
+            continue
+
+        # Find selected Google calendar IDs from widget settings
+        calendar_ids: list[str] = []
+        for widget in dashboard.widget_layout:
+            if widget.get("widget") == "calendar":
+                calendar_ids = widget.get("settings", {}).get(
+                    "google_calendar_ids", []
+                )
+                break
+
+        if not calendar_ids:
+            continue
+
+        try:
+            events = fetch_google_calendar_events(user, calendar_ids)
+
+            # Use "google:" prefix for source_url to distinguish from ICS
+            source_key = f"google:{user.id}"
+            today_start = datetime.combine(
+                date.today(), datetime.min.time(), tzinfo=timezone.utc,
+            )
+            today_end = today_start + timedelta(days=1)
+
+            CalendarEvent.objects.filter(
+                source_url=source_key,
+                start__gte=today_start,
+                start__lt=today_end,
+            ).delete()
+
+            for event_data in events:
+                CalendarEvent.objects.create(
+                    source_url=source_key,
+                    **event_data,
+                )
+            logger.info(
+                "Google Calendar updated for %s (%d events)",
+                user.username,
+                len(events),
+            )
+        except Exception:
+            logger.exception(
+                "Failed to fetch Google Calendar for %s", user.username,
+            )
+
+
+def fetch_google_photos() -> None:
+    """Cache Google Photos media URLs for connected users' selected albums."""
+    from allauth.socialaccount.models import SocialAccount
+
+    from dashboard.services.google_api import fetch_google_photos_media
+
+    google_users = SocialAccount.objects.filter(
+        provider="google",
+    ).select_related("user")
+
+    for social_account in google_users:
+        user = social_account.user
+        try:
+            dashboard = user.dashboard
+        except UserDashboard.DoesNotExist:
+            continue
+
+        # Find selected album ID from widget settings
+        album_id = ""
+        for widget in dashboard.widget_layout:
+            if widget.get("widget") == "slideshow":
+                album_id = widget.get("settings", {}).get(
+                    "google_photos_album_id", ""
+                )
+                break
+
+        if not album_id:
+            continue
+
+        try:
+            media = fetch_google_photos_media(user, album_id)
+
+            # Store cached media URLs in widget settings
+            for widget in dashboard.widget_layout:
+                if widget.get("widget") == "slideshow":
+                    widget["settings"]["cached_media"] = media
+                    break
+            dashboard.save()
+
+            logger.info(
+                "Google Photos cached for %s (%d items from album %s)",
+                user.username,
+                len(media),
+                album_id,
+            )
+        except Exception:
+            logger.exception(
+                "Failed to fetch Google Photos for %s", user.username,
+            )
