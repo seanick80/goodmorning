@@ -268,8 +268,6 @@ class AuthStatusView(APIView):
         if google_account:
             data["google_connected"] = True
             data["google_email"] = google_account.extra_data.get("email", "")
-            data["google_name"] = google_account.extra_data.get("name", "")
-            data["google_picture"] = google_account.extra_data.get("picture", "")
             token = SocialToken.objects.filter(
                 account=google_account
             ).first()
@@ -324,49 +322,81 @@ class GoogleCalendarListView(APIView):
             )
 
 
-class GooglePhotosAlbumsView(APIView):
-    """GET /api/auth/google/photos/albums/ -- list user's Google Photos albums."""
+class PhotosPickerCreateView(APIView):
+    """POST /api/auth/google/photos/picker/ -- create a Picker session."""
 
-    def get(self, request: object) -> Response:
+    def post(self, request: object) -> Response:
         if not request.user.is_authenticated:
             return Response(
                 {"detail": "Authentication required."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        from .services.google_api import get_google_credentials
-
-        credentials = get_google_credentials(request.user)
-        if credentials is None:
-            return Response(
-                {"detail": "Google account not connected."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        from googleapiclient.discovery import build
+        from .services.google_api import create_picker_session
 
         try:
-            service = build(
-                "photoslibrary",
-                "v1",
-                credentials=credentials,
-                static_discovery=False,
-            )
-            result = service.albums().list(pageSize=50).execute()
-            albums = [
-                {
-                    "id": album["id"],
-                    "title": album.get("title", ""),
-                    "media_items_count": album.get("mediaItemsCount", "0"),
-                    "cover_photo_url": album.get(
-                        "coverPhotoBaseUrl", ""
-                    ),
-                }
-                for album in result.get("albums", [])
-            ]
-            return Response(albums)
+            session = create_picker_session(request.user)
+            if session is None:
+                return Response(
+                    {"detail": "Google account not connected."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            return Response(session)
         except Exception as exc:
-            logger.exception("Failed to list Google Photos albums")
+            logger.exception("Failed to create Photos Picker session")
+            return Response(
+                {"detail": f"Google API error: {exc}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
+class PhotosPickerPollView(APIView):
+    """GET /api/auth/google/photos/picker/<session_id>/ -- poll session status."""
+
+    def get(self, request: object, session_id: str) -> Response:
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication required."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        from .services.google_api import poll_picker_session
+
+        try:
+            result = poll_picker_session(request.user, session_id)
+            if result is None:
+                return Response(
+                    {"detail": "Google account not connected."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            return Response({
+                "media_items_set": result.get("mediaItemsSet", False),
+            })
+        except Exception as exc:
+            logger.exception("Failed to poll Picker session")
+            return Response(
+                {"detail": f"Google API error: {exc}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
+class PhotosPickerMediaView(APIView):
+    """GET /api/auth/google/photos/picker/<session_id>/media/ -- get picked photos."""
+
+    def get(self, request: object, session_id: str) -> Response:
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication required."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        from .services.google_api import fetch_picker_media_items
+
+        try:
+            items = fetch_picker_media_items(request.user, session_id)
+            return Response(items)
+        except Exception as exc:
+            logger.exception("Failed to fetch Picker media items")
             return Response(
                 {"detail": f"Google API error: {exc}"},
                 status=status.HTTP_502_BAD_GATEWAY,

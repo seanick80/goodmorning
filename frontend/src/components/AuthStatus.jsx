@@ -34,11 +34,6 @@ export default function AuthStatus() {
         )}
         <span className={styles.name}>{displayName}</span>
       </div>
-      <form method="POST" action="/accounts/logout/" className={styles.logoutForm}>
-        <button type="submit" className={styles.signOutButton}>
-          Sign out
-        </button>
-      </form>
     </div>
   );
 }

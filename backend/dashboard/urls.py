@@ -15,5 +15,7 @@ urlpatterns = [
     # Auth
     path("auth/status/", views.AuthStatusView.as_view(), name="auth-status"),
     path("auth/google/calendars/", views.GoogleCalendarListView.as_view(), name="google-calendars"),
-    path("auth/google/photos/albums/", views.GooglePhotosAlbumsView.as_view(), name="google-photos-albums"),
+    path("auth/google/photos/picker/", views.PhotosPickerCreateView.as_view(), name="photos-picker-create"),
+    path("auth/google/photos/picker/<str:session_id>/", views.PhotosPickerPollView.as_view(), name="photos-picker-poll"),
+    path("auth/google/photos/picker/<str:session_id>/media/", views.PhotosPickerMediaView.as_view(), name="photos-picker-media"),
 ]

@@ -14,8 +14,9 @@ if TYPE_CHECKING:
 logger = logging.getLogger(__name__)
 
 GOOGLE_SCOPES = [
+    "email",
     "https://www.googleapis.com/auth/calendar.readonly",
-    "https://www.googleapis.com/auth/photoslibrary.readonly",
+    "https://www.googleapis.com/auth/photospicker.mediaitems.readonly",
 ]
 
 
@@ -128,51 +129,103 @@ def fetch_google_calendar_events(
     return events
 
 
-def fetch_google_photos_media(
-    user: User,
-    album_id: str,
-) -> list[dict]:
-    """Fetch media items from a Google Photos album.
+def create_picker_session(user: User) -> dict | None:
+    """Create a Google Photos Picker session.
 
-    Returns a list of dicts with id, url, width, height, mime_type.
+    Returns dict with 'id' (session ID) and 'pickerUri', or None on failure.
+    """
+    credentials = get_google_credentials(user)
+    if credentials is None:
+        return None
+
+    import google.auth.transport.requests
+    # Ensure token is fresh
+    if credentials.expired or not credentials.token:
+        credentials.refresh(google.auth.transport.requests.Request())
+
+    import requests
+
+    resp = requests.post(
+        "https://photospicker.googleapis.com/v1/sessions",
+        headers={"Authorization": f"Bearer {credentials.token}"},
+        json={},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    data = resp.json()
+    return {
+        "id": data["id"],
+        "picker_uri": data["pickerUri"],
+    }
+
+
+def poll_picker_session(user: User, session_id: str) -> dict | None:
+    """Poll a Picker session to check if the user has finished selecting.
+
+    Returns session dict with 'mediaItemsSet' boolean.
+    """
+    credentials = get_google_credentials(user)
+    if credentials is None:
+        return None
+
+    import google.auth.transport.requests
+    if credentials.expired or not credentials.token:
+        credentials.refresh(google.auth.transport.requests.Request())
+
+    import requests
+
+    resp = requests.get(
+        f"https://photospicker.googleapis.com/v1/sessions/{session_id}",
+        headers={"Authorization": f"Bearer {credentials.token}"},
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def fetch_picker_media_items(
+    user: User,
+    session_id: str,
+) -> list[dict]:
+    """Fetch media items selected via the Picker.
+
+    Returns a list of dicts with id, base_url, mime_type.
     """
     credentials = get_google_credentials(user)
     if credentials is None:
         return []
 
-    from googleapiclient.discovery import build
+    import google.auth.transport.requests
+    if credentials.expired or not credentials.token:
+        credentials.refresh(google.auth.transport.requests.Request())
 
-    service = build(
-        "photoslibrary", "v1",
-        credentials=credentials,
-        static_discovery=False,
-    )
+    import requests
 
     media_items: list[dict] = []
     page_token: str | None = None
 
     while True:
-        body: dict = {"albumId": album_id, "pageSize": 100}
+        params: dict = {"sessionId": session_id}
         if page_token:
-            body["pageToken"] = page_token
+            params["pageToken"] = page_token
 
-        result = service.mediaItems().search(body=body).execute()
+        resp = requests.get(
+            "https://photospicker.googleapis.com/v1/mediaItems",
+            headers={"Authorization": f"Bearer {credentials.token}"},
+            params=params,
+            timeout=15,
+        )
+        resp.raise_for_status()
+        data = resp.json()
 
-        for item in result.get("mediaItems", []):
-            base_url = item.get("baseUrl", "")
-            metadata = item.get("mediaMetadata", {})
-            width = metadata.get("width", "0")
-            height = metadata.get("height", "0")
-
+        for item in data.get("mediaItems", []):
             media_items.append({
-                "id": item["id"],
-                "url": f"{base_url}=w{width}-h{height}",
-                "width": int(width),
-                "height": int(height),
+                "id": item.get("id", ""),
+                "base_url": item.get("baseUrl", ""),
                 "mime_type": item.get("mimeType", ""),
             })
 
-        page_token = result.get("nextPageToken")
+        page_token = data.get("nextPageToken")
         if not page_token:
             break
 

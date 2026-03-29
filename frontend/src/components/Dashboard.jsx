@@ -1,25 +1,32 @@
+import { useState } from "react";
 import ClockWidget from "./widgets/ClockWidget";
 import WeatherWidget from "./widgets/WeatherWidget";
 import StocksWidget from "./widgets/StocksWidget";
 import CalendarWidget from "./widgets/CalendarWidget";
 import NewsWidget from "./widgets/NewsWidget";
 import AuthStatus from "./AuthStatus";
-import CalendarPicker from "./CalendarPicker";
-import AlbumPicker from "./AlbumPicker";
+import SettingsPanel from "./SettingsPanel";
 import { useDashboard } from "../hooks/useDashboard";
-import { useAuth } from "../hooks/useAuth";
 import styles from "./Dashboard.module.css";
 
 export default function Dashboard() {
   const { data: dashboard } = useDashboard();
-  const { data: auth } = useAuth();
   const clockSettings = dashboard?.clock_settings ?? undefined;
-  const googleConnected = auth?.authenticated && auth?.google_connected;
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   return (
     <div className={styles.wrapper}>
       <header className={styles.header}>
         <AuthStatus />
+        <button
+          type="button"
+          className={styles.settingsButton}
+          onClick={() => setSettingsOpen(true)}
+          aria-label="Open settings"
+          title="Settings"
+        >
+          {"\u2699"}
+        </button>
       </header>
 
       <div className={styles.hero}>
@@ -32,10 +39,10 @@ export default function Dashboard() {
           <StocksWidget />
           <CalendarWidget />
           <NewsWidget />
-          {googleConnected && <CalendarPicker />}
-          {googleConnected && <AlbumPicker />}
         </div>
       </div>
+
+      {settingsOpen && <SettingsPanel onClose={() => setSettingsOpen(false)} />}
     </div>
   );
 }

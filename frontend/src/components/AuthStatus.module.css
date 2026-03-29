@@ -40,24 +40,3 @@
 .signInButton:hover {
   background: rgba(255, 255, 255, 0.18);
 }
-
-.logoutForm {
-  margin: 0;
-}
-
-.signOutButton {
-  padding: 0.3rem 0.75rem;
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
-  background: none;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-  cursor: pointer;
-  transition: color 0.2s, border-color 0.2s;
-  font-family: inherit;
-}
-
-.signOutButton:hover {
-  color: rgba(255, 255, 255, 0.8);
-  border-color: rgba(255, 255, 255, 0.3);
-}

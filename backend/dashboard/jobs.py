@@ -212,10 +212,15 @@ def fetch_google_calendar() -> None:
 
 
 def fetch_google_photos() -> None:
-    """Cache Google Photos media URLs for connected users' selected albums."""
+    """Refresh Google Photos Picker media URLs for slideshow widgets.
+
+    The Picker API baseUrls expire, so this job re-fetches them from
+    the stored picker session ID. If the session has expired, the user
+    will need to re-pick photos via the UI.
+    """
     from allauth.socialaccount.models import SocialAccount
 
-    from dashboard.services.google_api import fetch_google_photos_media
+    from dashboard.services.google_api import fetch_picker_media_items
 
     google_users = SocialAccount.objects.filter(
         provider="google",
@@ -228,22 +233,22 @@ def fetch_google_photos() -> None:
         except UserDashboard.DoesNotExist:
             continue
 
-        # Find selected album ID from widget settings
-        album_id = ""
+        session_id = ""
         for widget in dashboard.widget_layout:
             if widget.get("widget") == "slideshow":
-                album_id = widget.get("settings", {}).get(
-                    "google_photos_album_id", ""
+                session_id = widget.get("settings", {}).get(
+                    "picker_session_id", ""
                 )
                 break
 
-        if not album_id:
+        if not session_id:
             continue
 
         try:
-            media = fetch_google_photos_media(user, album_id)
+            media = fetch_picker_media_items(user, session_id)
+            if not media:
+                continue
 
-            # Store cached media URLs in widget settings
             for widget in dashboard.widget_layout:
                 if widget.get("widget") == "slideshow":
                     widget["settings"]["cached_media"] = media
@@ -251,12 +256,11 @@ def fetch_google_photos() -> None:
             dashboard.save()
 
             logger.info(
-                "Google Photos cached for %s (%d items from album %s)",
+                "Google Photos refreshed for %s (%d items)",
                 user.username,
                 len(media),
-                album_id,
             )
         except Exception:
             logger.exception(
-                "Failed to fetch Google Photos for %s", user.username,
+                "Failed to refresh Google Photos for %s", user.username,
             )

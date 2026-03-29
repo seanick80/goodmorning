@@ -145,10 +145,9 @@ ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "SCOPE": [
-            "profile",
             "email",
             "https://www.googleapis.com/auth/calendar.readonly",
-            "https://www.googleapis.com/auth/photoslibrary.readonly",
+            "https://www.googleapis.com/auth/photospicker.mediaitems.readonly",
         ],
         "AUTH_PARAMS": {"access_type": "offline", "prompt": "consent"},
     },
@@ -158,6 +157,7 @@ GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 SOCIALACCOUNT_LOGIN_ON_GET = True
+SOCIALACCOUNT_STORE_TOKENS = True
 
 # APScheduler
 APSCHEDULER_DATETIME_FORMAT = "N j, Y, f:s a"

@@ -290,8 +290,6 @@ class TestAuthStatusView:
             uid="123456",
             extra_data={
                 "email": "g@gmail.com",
-                "name": "Google User",
-                "picture": "https://photo.url/pic.jpg",
             },
         )
         api_client.force_authenticate(user=user)
@@ -301,7 +299,6 @@ class TestAuthStatusView:
         assert data["authenticated"] is True
         assert data["google_connected"] is True
         assert data["google_email"] == "g@gmail.com"
-        assert data["google_name"] == "Google User"
 
 
 @pytest.mark.django_db()
@@ -320,15 +317,15 @@ class TestGoogleCalendarListView:
 
 
 @pytest.mark.django_db()
-class TestGooglePhotosAlbumsView:
-    """Tests for GET /api/auth/google/photos/albums/."""
+class TestPhotosPickerCreateView:
+    """Tests for POST /api/auth/google/photos/picker/."""
 
     def test_unauthenticated_returns_401(self, api_client):
-        response = api_client.get("/api/auth/google/photos/albums/")
+        response = api_client.post("/api/auth/google/photos/picker/")
         assert response.status_code == 401
 
     def test_no_google_account_returns_400(self, api_client):
         user = UserFactory()
         api_client.force_authenticate(user=user)
-        response = api_client.get("/api/auth/google/photos/albums/")
+        response = api_client.post("/api/auth/google/photos/picker/")
         assert response.status_code == 400
