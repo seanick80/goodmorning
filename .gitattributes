@@ -1,1 +1,9 @@
-*.sh text eol=lf
+# Force LF line endings for all text files (cross-platform: Windows dev, Linux Pi)
+* text=auto eol=lf
+
+# Explicitly mark binary files
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
