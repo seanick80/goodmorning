@@ -2182,16 +2182,24 @@ See Section 11 above.
 - **Docker Compose deployment:** Single `docker compose up` for the full stack (Django + PostgreSQL + nginx). See FRAMEWORK_ANALYSIS.md section 6.5 for the compose file structure.
 - **Raspberry Pi deployment:** Same Docker Compose with `platform: linux/arm64/v8`. Tuned PostgreSQL settings for 1 GB RAM.
 
-### Google Account Integration (Phase 7)
+### Google Account Integration (Phase 7) — IN PROGRESS
 
 - **OAuth 2.0 flow:** Use `django-allauth` with Google provider. Requires Google Cloud Console project, OAuth consent screen, and client ID/secret.
+- **Setup:** GCP project in Testing mode — no privacy policy, verification, or domain ownership needed. Up to 100 test users. "This app isn't verified" warning on first login (click through once).
+- **Required scopes:**
+  - `profile`, `email` — user identity
+  - `https://www.googleapis.com/auth/calendar.readonly` — calendar access
+  - `https://www.googleapis.com/auth/photoslibrary.readonly` — photos access
 - **What it unlocks:**
   - Google Calendar API (real-time event sync, faster than ICS feeds)
+  - Google Photos API (album selection for slideshow widget)
   - User authentication (replace AllowAny with proper per-user auth)
   - Profile info (display name, avatar on dashboard)
-  - Gmail integration (unread count widget)
-- **Implementation:** Add `allauth` to INSTALLED_APPS, configure Google provider, create a login page, protect API endpoints with authentication.
-- **Per-user calendar auto-discovery:** Once Google OAuth is in place, use the Google Calendar API to automatically discover and list the user's calendars. Replace the current `NICKS_CALENDAR` env var and manual `ics_urls` approach with an authenticated calendar picker in the widget settings UI. Each user's calendars are fetched via their OAuth token — no manual URL configuration needed.
+  - Gmail integration (unread count widget, future)
+- **Implementation:** `django-allauth[socialaccount]`, Google provider, `access_type=offline` for refresh tokens (allows background jobs to keep fetching without re-auth).
+- **Per-user calendar auto-discovery:** Google Calendar API auto-discovers user's calendars. Replace the current `USER_CALENDAR` env var and manual ICS URL approach with an authenticated calendar picker. ICS feeds remain as fallback for non-Google calendars.
+- **Google Photos album picker:** User selects a Google Photos album via settings UI. Background job caches album contents every 30-60 minutes. Frontend slideshow pulls from cached media URLs.
+- **Redirect URIs:** `http://goodmorning.local/api/auth/callback/` (Pi), `http://localhost:8000/api/auth/callback/` (dev)
 
 ### Additional Widgets
 
