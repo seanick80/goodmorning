@@ -12,9 +12,9 @@
 # Prerequisites:
 #   - SSH key auth to goodmorning.local
 #   - rsync (not included in Git Bash on Windows — install via MSYS2 `pacman -S rsync`,
-#     or run this script from WSL). For initial deploy without rsync, use scp+tar:
-#       tar czf - backend/ frontend/dist/ pi/ | ssh goodmorning@goodmorning.local \
-#         'tar xzf - -C /opt/goodmorning/'
+#     or run this script from WSL). For deploy without rsync, use the venv-preserving
+#     scp+tar procedure documented in docs/raspberry-pi-deployment.md (Troubleshooting).
+#     Do NOT rm -rf the backend dir — it destroys the venv with platform-specific packages.
 
 set -euo pipefail
 

@@ -1,19 +1,31 @@
+.wrapper {
+  max-width: 1200px;
+  margin: 0 auto;
+  min-height: 100vh;
+  padding: 1.5rem;
+}
+
+.header {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 1rem;
+}
+
 .hero {
   display: grid;
   grid-template-columns: 1fr;
   gap: 1rem;
-  padding: 1.5rem;
-  max-width: 1200px;
-  margin: 0 auto;
-  min-height: 100vh;
   align-content: start;
 }
 
 @media (min-width: 768px) {
+  .wrapper {
+    padding: 2rem;
+  }
+
   .hero {
     grid-template-columns: 3fr 2fr;
     grid-template-rows: auto 1fr;
-    padding: 2rem;
   }
 }
 

@@ -134,23 +134,60 @@ sudo chown -R goodmorning:goodmorning /opt/goodmorning/
 
 **Cause:** The `goodmorning-kiosk.service` launches Chromium as the `goodmorning` system user via cage (Wayland compositor). On a full desktop image, the `pi` user is already logged into the desktop with its own display session. The `goodmorning` user has no display access, so Chromium either fails (`Missing X server`) or opens a tab in the `pi` user's existing Chromium session (which immediately exits, triggering systemd restart).
 
-**Fix for full desktop image:** Disable the kiosk systemd service and use a desktop autostart entry instead:
-```bash
-sudo systemctl stop goodmorning-kiosk
-sudo systemctl disable goodmorning-kiosk
+**Fix:** The cage + systemd kiosk service has been removed entirely. The correct approach is XDG autostart in the `pi` user's desktop session — see Issue 13 for the full story.
 
-mkdir -p ~/.config/autostart
-cat > ~/.config/autostart/goodmorning-kiosk.desktop << 'EOF'
-[Desktop Entry]
-Type=Application
-Name=Good Morning Dashboard
-Exec=chromium-browser --kiosk --noerrdialogs --disable-translate --no-first-run --disable-infobars --disable-session-crashed-bubble --disable-features=TranslateUI --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --password-store=basic http://localhost
-Hidden=false
-X-GNOME-Autostart-enabled=true
-EOF
+**Updated in:** `pi-setup.sh` (kiosk section rewritten), `goodmorning-kiosk.service` deleted from repo, `raspberry-pi-deployment.md` updated.
+
+---
+
+## Issue 12: Deploy procedure wiped the Python venv
+
+**Symptom:** After deploying a backend update via `scp`+`tar`, the application failed to start because the venv was gone. Recreating it on the Pi took several minutes and required PyPI access.
+
+**Root cause:** The manual deploy procedure ran `sudo rm -rf /opt/goodmorning/backend` before extracting the new tarball. This deleted the entire backend directory including `.venv/`, even though the tarball intentionally excluded it.
+
+**Fix:** Extract new code to a temporary directory, copy the existing venv into it, then swap:
+1. `tar xzf` into `/opt/goodmorning/backend_new`
+2. `cp -a /opt/goodmorning/backend/.venv /opt/goodmorning/backend_new/.venv`
+3. `rm -rf /opt/goodmorning/backend && mv backend_new backend`
+
+**Why this matters:** The venv contains platform-specific compiled packages (aarch64). `psycopg` uses the system `libpq`, and `PyJWT[crypto]` needs `cryptography` — both compile native extensions. Recreating the venv on every deploy is slow and may fail if PyPI is flaky or the Pi is offline.
+
+**Also discovered:** `PyJWT[crypto]` was a missing dependency needed for the Google OAuth calendar integration. It was added to `requirements.txt` during the OAuth deploy and compiled successfully on the Pi, but would need to be recompiled if the venv were wiped.
+
+**Updated in:** `reference_pi_access.md` (deploying updates section), `raspberry-pi-deployment.md` (troubleshooting section).
+
+---
+
+## Issue 13: Two Chromium instances — cage kiosk overlaying the desktop
+
+**Symptom:** Chromium appeared fullscreen but F11 did not toggle fullscreen, right-click did not work, and the desktop session was inaccessible. Pressing Ctrl+Alt+F7 revealed the real desktop session running underneath.
+
+**Root cause:** Two separate Chromium instances were running simultaneously:
+
+1. **`goodmorning` system user on tty1:** Getty autologin (`/etc/systemd/system/getty@tty1.service.d/autologin.conf`) logged in the `goodmorning` user, whose `/home/goodmorning/.bash_profile` ran `exec cage -- chromium-browser --kiosk ...`. Cage is a Wayland compositor that runs on tty1 and traps all input. `Restart=always` on systemd AND getty respawning meant it could never be killed.
+
+2. **`pi` user's desktop session:** XDG autostart file at `/home/pi/.config/autostart/goodmorning-kiosk.desktop` launched `chromium-browser --start-fullscreen ...` in the pi user's desktop session (lightdm + labwc/wayfire). This was the correct, intended approach.
+
+The cage instance on tty1 was overlaying the desktop, intercepting all input. It appeared to be the dashboard but was actually a separate, trapped session.
+
+**Fix (already applied to the Pi):**
+```bash
+# Remove the old kiosk approach
+sudo rm -f /home/goodmorning/.bash_profile
+sudo rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
+sudo rm -f /etc/systemd/system/goodmorning-kiosk.service
+sudo systemctl daemon-reload
 ```
 
-**Note:** The cage + systemd kiosk approach is correct for Pi OS Lite (no desktop). On a full desktop image, use the XDG autostart `.desktop` file approach instead. Both achieve the same result — Chromium fullscreen on boot.
+**What remains correct on the Pi:**
+- `/home/pi/.config/autostart/goodmorning-kiosk.desktop` with `--start-fullscreen`
+- `lightdm` display manager running the `pi` user's desktop session
+- F11 toggles fullscreen, Ctrl+Alt+F7 returns to graphical desktop from console
+
+**Tip:** If the screen shows a console/command prompt instead of the dashboard, press **Ctrl+Alt+F7** to switch to the graphical desktop.
+
+**Updated in:** `pi-setup.sh` (kiosk section rewritten), `goodmorning-kiosk.service` deleted from repo, `raspberry-pi-deployment.md` (kiosk sections updated).
 
 ---
 

@@ -151,6 +151,12 @@ setup_backend() {
     info "Seeding default data..."
     python "$BACKEND_DIR/manage.py" seed_data
 
+    # Configure Google OAuth if credentials are set
+    if [ -n "${GOOGLE_CLIENT_ID:-}" ] && [ -n "${GOOGLE_CLIENT_SECRET:-}" ]; then
+        info "Configuring Google OAuth..."
+        python "$BACKEND_DIR/manage.py" setup_google_oauth
+    fi
+
     # Collect static files
     info "Collecting static files..."
     python "$BACKEND_DIR/manage.py" collectstatic --no-input --clear -v0

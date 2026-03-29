@@ -259,3 +259,76 @@ class TestCORSConfiguration:
             HTTP_ORIGIN="http://evil.example.com",
         )
         assert response.get("Access-Control-Allow-Origin") is None
+
+
+@pytest.mark.django_db()
+class TestAuthStatusView:
+    """Tests for GET /api/auth/status/."""
+
+    def test_unauthenticated_returns_false(self, api_client):
+        response = api_client.get("/api/auth/status/")
+        assert response.status_code == 200
+        assert response.json() == {"authenticated": False}
+
+    def test_authenticated_without_google(self, api_client):
+        user = UserFactory(username="testuser", email="test@example.com")
+        api_client.force_authenticate(user=user)
+        response = api_client.get("/api/auth/status/")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["authenticated"] is True
+        assert data["email"] == "test@example.com"
+        assert data["google_connected"] is False
+
+    def test_authenticated_with_google(self, api_client):
+        from allauth.socialaccount.models import SocialAccount
+
+        user = UserFactory(username="googleuser", email="g@gmail.com")
+        SocialAccount.objects.create(
+            user=user,
+            provider="google",
+            uid="123456",
+            extra_data={
+                "email": "g@gmail.com",
+                "name": "Google User",
+                "picture": "https://photo.url/pic.jpg",
+            },
+        )
+        api_client.force_authenticate(user=user)
+        response = api_client.get("/api/auth/status/")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["authenticated"] is True
+        assert data["google_connected"] is True
+        assert data["google_email"] == "g@gmail.com"
+        assert data["google_name"] == "Google User"
+
+
+@pytest.mark.django_db()
+class TestGoogleCalendarListView:
+    """Tests for GET /api/auth/google/calendars/."""
+
+    def test_unauthenticated_returns_401(self, api_client):
+        response = api_client.get("/api/auth/google/calendars/")
+        assert response.status_code == 401
+
+    def test_no_google_account_returns_400(self, api_client):
+        user = UserFactory()
+        api_client.force_authenticate(user=user)
+        response = api_client.get("/api/auth/google/calendars/")
+        assert response.status_code == 400
+
+
+@pytest.mark.django_db()
+class TestGooglePhotosAlbumsView:
+    """Tests for GET /api/auth/google/photos/albums/."""
+
+    def test_unauthenticated_returns_401(self, api_client):
+        response = api_client.get("/api/auth/google/photos/albums/")
+        assert response.status_code == 401
+
+    def test_no_google_account_returns_400(self, api_client):
+        user = UserFactory()
+        api_client.force_authenticate(user=user)
+        response = api_client.get("/api/auth/google/photos/albums/")
+        assert response.status_code == 400

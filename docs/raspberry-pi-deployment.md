@@ -28,8 +28,10 @@ Raspberry Pi OS Bookworm ships Python 3.11.2. Django 5.2 LTS is used (not 6.0) f
 │                                                    │
 │  systemd                                           │
 │  ├── goodmorning-web.service   (gunicorn, 2 workers)
-│  ├── goodmorning-scheduler.service (APScheduler)   │
-│  └── goodmorning-kiosk.service (Chromium fullscreen)│
+│  └── goodmorning-scheduler.service (APScheduler)   │
+│                                                    │
+│  XDG autostart (pi user desktop session)           │
+│  └── goodmorning-kiosk.desktop (Chromium fullscreen)│
 │                                                    │
 │  nginx (port 80)                                   │
 │  ├── /           → frontend/dist/ (static files)   │
@@ -95,8 +97,7 @@ Comfortable margin. No swap needed under normal operation.
 ├── pi/                   # Pi-specific config files
 │   ├── nginx.conf
 │   ├── goodmorning-web.service
-│   ├── goodmorning-scheduler.service
-│   └── goodmorning-kiosk.service
+│   └── goodmorning-scheduler.service
 └── pi-update.sh          # On-Pi update script
 ```
 
@@ -171,7 +172,7 @@ A single `pi-setup.sh` script runs on the Pi (pushed via SSH or curl) that:
 1. **System packages:**
    ```
    apt-get update
-   apt-get install python3 python3-venv python3-dev postgresql postgresql-client nginx chromium-browser cage libpq-dev gcc curl
+   apt-get install python3 python3-venv python3-dev postgresql postgresql-client nginx chromium-browser libpq-dev gcc curl
    ```
    **Note:** `apt-get upgrade` is intentionally omitted. On a full desktop image it takes 15+ minutes and can timeout SSH connections. Run it manually before deploying if desired.
 
@@ -189,12 +190,12 @@ A single `pi-setup.sh` script runs on the Pi (pushed via SSH or curl) that:
    - Install config to serve frontend on `/` and proxy `/api/` to gunicorn
 
 5. **systemd services:**
-   - Install and enable `goodmorning-web`, `goodmorning-scheduler`, `goodmorning-kiosk`
+   - Install and enable `goodmorning-web`, `goodmorning-scheduler`
 
-6. **Kiosk mode:**
-   - Install minimal X11/Wayland session
-   - Auto-login to kiosk user
-   - Chromium launches fullscreen pointing at `http://localhost`
+6. **Kiosk mode (XDG autostart):**
+   - Create `/home/pi/.config/autostart/goodmorning-kiosk.desktop` for the `pi` user's desktop session
+   - Chromium launches with `--start-fullscreen` pointing at `http://localhost`
+   - F11 toggles fullscreen, desktop session remains accessible
    - Disable screen blanking / power management
 
 7. **Reboot** — dashboard should be live
@@ -236,7 +237,7 @@ Dev machine                              Raspberry Pi
 
 ### Key design decisions
 
-- **rsync over SSH** — fast incremental sync, only changed files transfer. **Note:** rsync is not available in Git Bash on Windows. Install it via MSYS2/pacman (`pacman -S rsync`), use WSL, or use the `scp`+`tar` fallback built into `deploy-pi.sh`
+- **rsync over SSH** — fast incremental sync, only changed files transfer. **Note:** rsync is not available in Git Bash on Windows. Install it via MSYS2/pacman (`pacman -S rsync`), use WSL, or use the `scp`+`tar` fallback (see Troubleshooting section for the venv-preserving procedure)
 - **Frontend built on dev machine** — Pi doesn't need Node.js installed (saves ~200 MB + build time)
 - **No downtime** — gunicorn restarts gracefully (workers finish current requests)
 - **Health check** — script waits for the API to respond before reporting success
@@ -266,15 +267,19 @@ Already covered above. Summary: Docker adds ~500 MB memory overhead and slower c
 
 ## Kiosk Mode Details
 
-The Pi runs as a single-purpose dashboard display:
+The Pi runs as a single-purpose dashboard display using the `pi` user's desktop session:
 
-- **Auto-login** to a `kiosk` user (no desktop environment)
-- **Cage or labwc** (lightweight Wayland compositor) launches Chromium in fullscreen
-- **Chromium flags:** `--kiosk --noerrdialogs --disable-translate --no-first-run`
-- **Touchscreen:** No custom touch handling — Chromium handles touch natively on Wayland. Standard browser gestures (scroll, tap) work out of the box. No swipe/gesture features for now; the user may want to swipe to YouTube/Spotify in the future, which would be a separate browser tab or app-switcher feature.
+- **XDG autostart:** `/home/pi/.config/autostart/goodmorning-kiosk.desktop` launches Chromium on login
+- **Display manager:** `lightdm` auto-logs in the `pi` user, which starts the desktop compositor (labwc/wayfire)
+- **Chromium flags:** `--start-fullscreen --noerrdialogs --disable-translate --no-first-run`
+- **F11 toggles fullscreen** — the desktop session remains accessible (unlike `--kiosk` mode which traps all input)
+- **Touchscreen:** No custom touch handling — Chromium handles touch natively. Standard browser gestures (scroll, tap) work out of the box.
 - **Screen always on:** disable DPMS and screen blanking
-- **Crash recovery:** systemd `Restart=always` on all services
-- **Power loss:** Pi boots → systemd starts services → Chromium opens dashboard
+- **Service recovery:** systemd `Restart=always` on web and scheduler services
+- **Power loss:** Pi boots → lightdm auto-login → desktop session starts → XDG autostart launches Chromium → systemd starts web/scheduler services
+- **Console vs desktop:** If the screen shows a console/command prompt instead of the dashboard, press **Ctrl+Alt+F7** to switch back to the graphical desktop
+
+**Why not `--kiosk` mode with cage on tty1?** The original approach used a `goodmorning` system user with cage (Wayland compositor) on tty1, launched via getty autologin and `.bash_profile`. This conflicts with the `pi` user's desktop session — cage overlays the desktop, traps all input (no F11, no right-click), and `Restart=always` on both systemd and getty makes it impossible to kill. Use XDG autostart with `--start-fullscreen` instead.
 
 ---
 
@@ -318,7 +323,6 @@ Uptime:       12 days, 3:42
 Services:
   web          active (running) since Mon 2026-03-13 08:00:01
   scheduler    active (running) since Mon 2026-03-13 08:00:02
-  kiosk        active (running) since Mon 2026-03-13 08:00:05
 Database:      OK (5 tables, 847 rows)
 Last fetch:
   weather      2 min ago
@@ -364,7 +368,6 @@ Django file-based logs are also at `/opt/goodmorning/backend/logs/` and can be r
 | `pi/nginx.conf` | nginx site config (static + API proxy) |
 | `pi/goodmorning-web.service` | systemd unit for gunicorn |
 | `pi/goodmorning-scheduler.service` | systemd unit for APScheduler |
-| `pi/goodmorning-kiosk.service` | systemd unit for Chromium kiosk |
 | `pi/postgresql.conf.d/tuning.conf` | PostgreSQL Pi tuning overrides |
 | `pi/.env.production` | Template production environment |
 | `deploy-pi.sh` | Dev-machine script: build, rsync, trigger update |
@@ -422,7 +425,34 @@ The project `.gitattributes` enforces LF endings for `.sh` files, but this only 
 Git Bash on Windows does not include rsync. Options:
 1. Install rsync via MSYS2: `pacman -S rsync`
 2. Use WSL for the deploy script
-3. Use `scp` + `tar` for initial deploy: `tar czf - backend/ | ssh pi@goodmorning.local 'tar xzf - -C /opt/goodmorning/'`
+3. Use `scp` + `tar` with the venv-preserving swap procedure (see below)
+
+**Important — venv preservation:** When using `scp`+`tar` to deploy backend updates, do NOT `rm -rf /opt/goodmorning/backend` before extracting. The venv contains platform-specific compiled packages (aarch64). Recreating it on every deploy is slow and may fail if PyPI is flaky. Instead, extract to a temp directory, copy the existing venv over, then swap:
+```bash
+# Build tarball (from c:\sourcecode\goodmorning):
+tar czf /tmp/backend.tar.gz --exclude=__pycache__ --exclude='*.pyc' \
+    --exclude=.venv --exclude=logs --exclude=db.sqlite3 --exclude=staticfiles backend/
+scp /tmp/backend.tar.gz pi@goodmorning.local:/tmp/
+
+# Extract to temp dir, preserve venv, swap atomically
+ssh pi@goodmorning.local "\
+    sudo rm -rf /opt/goodmorning/backend_new \
+    && sudo mkdir /opt/goodmorning/backend_new \
+    && cd /opt/goodmorning \
+    && sudo tar xzf /tmp/backend.tar.gz -C backend_new --strip-components=1 \
+    && sudo cp -a /opt/goodmorning/backend/.venv /opt/goodmorning/backend_new/.venv \
+    && sudo rm -rf /opt/goodmorning/backend \
+    && sudo mv /opt/goodmorning/backend_new /opt/goodmorning/backend \
+    && sudo chown -R goodmorning:goodmorning /opt/goodmorning/"
+
+# Install any new/updated deps
+ssh pi@goodmorning.local "sudo -u goodmorning bash -c '\
+    cd /opt/goodmorning/backend && source .venv/bin/activate \
+    && pip install -r requirements.txt'"
+
+# Restart services
+ssh pi@goodmorning.local "sudo systemctl restart goodmorning-web goodmorning-scheduler"
+```
 
 ### `apt-get upgrade` times out over SSH
 
@@ -444,13 +474,8 @@ mkdir -p ~/.ssh && chmod 700 ~/.ssh
 ```
 Then re-run `goodmorning-setup.sh`.
 
-### Kiosk mode flashes/restarts on full desktop image
+### Screen shows console instead of dashboard
 
-The `goodmorning-kiosk.service` uses cage (Wayland compositor) which conflicts with the desktop session on a full Pi OS image. Disable the service and use a desktop autostart entry instead:
-```bash
-sudo systemctl stop goodmorning-kiosk
-sudo systemctl disable goodmorning-kiosk
-mkdir -p ~/.config/autostart
-# Create ~/.config/autostart/goodmorning-kiosk.desktop (see pi-setup-notes.md for contents)
-```
-The cage approach works correctly on Pi OS Lite (no desktop environment).
+If the Pi boots to a text console or command prompt instead of the dashboard, press **Ctrl+Alt+F7** to switch back to the graphical desktop. The console is tty1; the desktop session runs on a different virtual terminal.
+
+If the desktop session itself is not running, check that lightdm is enabled: `sudo systemctl enable lightdm && sudo reboot`.

@@ -12,4 +12,8 @@ urlpatterns = [
     path("dashboard/", views.DashboardView.as_view(), name="dashboard"),
     path("geocode/", views.GeocodeView.as_view(), name="geocode"),
     path("weather/location/", views.WeatherLocationView.as_view(), name="weather-location"),
+    # Auth
+    path("auth/status/", views.AuthStatusView.as_view(), name="auth-status"),
+    path("auth/google/calendars/", views.GoogleCalendarListView.as_view(), name="google-calendars"),
+    path("auth/google/photos/albums/", views.GooglePhotosAlbumsView.as_view(), name="google-photos-albums"),
 ]

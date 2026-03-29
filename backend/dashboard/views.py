@@ -1,11 +1,16 @@
 """API views for the dashboard."""
 
+from __future__ import annotations
+
+import logging
 from datetime import date, datetime, timedelta, timezone
 
 from django.contrib.auth.models import User
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+logger = logging.getLogger(__name__)
 
 from .models import (
     CalendarEvent,
@@ -237,3 +242,132 @@ class WeatherLocationView(APIView):
             )
 
         return Response({"detail": "Location updated.", "location_key": location_key})
+
+
+class AuthStatusView(APIView):
+    """GET /api/auth/status/ -- return current auth state."""
+
+    def get(self, request: object) -> Response:
+        if not request.user.is_authenticated:
+            return Response({"authenticated": False})
+
+        from allauth.socialaccount.models import SocialAccount, SocialToken
+
+        google_account = (
+            SocialAccount.objects.filter(
+                user=request.user, provider="google"
+            ).first()
+        )
+
+        data: dict = {
+            "authenticated": True,
+            "username": request.user.username,
+            "email": request.user.email,
+        }
+
+        if google_account:
+            data["google_connected"] = True
+            data["google_email"] = google_account.extra_data.get("email", "")
+            data["google_name"] = google_account.extra_data.get("name", "")
+            data["google_picture"] = google_account.extra_data.get("picture", "")
+            token = SocialToken.objects.filter(
+                account=google_account
+            ).first()
+            data["has_refresh_token"] = bool(
+                token and token.token_secret
+            )
+        else:
+            data["google_connected"] = False
+
+        return Response(data)
+
+
+class GoogleCalendarListView(APIView):
+    """GET /api/auth/google/calendars/ -- list user's Google calendars."""
+
+    def get(self, request: object) -> Response:
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication required."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        from .services.google_api import get_google_credentials
+
+        credentials = get_google_credentials(request.user)
+        if credentials is None:
+            return Response(
+                {"detail": "Google account not connected."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from googleapiclient.discovery import build
+
+        try:
+            service = build("calendar", "v3", credentials=credentials)
+            result = service.calendarList().list().execute()
+            calendars = [
+                {
+                    "id": cal["id"],
+                    "summary": cal.get("summary", ""),
+                    "primary": cal.get("primary", False),
+                    "background_color": cal.get("backgroundColor", ""),
+                }
+                for cal in result.get("items", [])
+            ]
+            return Response(calendars)
+        except Exception as exc:
+            logger.exception("Failed to list Google calendars")
+            return Response(
+                {"detail": f"Google API error: {exc}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
+class GooglePhotosAlbumsView(APIView):
+    """GET /api/auth/google/photos/albums/ -- list user's Google Photos albums."""
+
+    def get(self, request: object) -> Response:
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication required."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        from .services.google_api import get_google_credentials
+
+        credentials = get_google_credentials(request.user)
+        if credentials is None:
+            return Response(
+                {"detail": "Google account not connected."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        from googleapiclient.discovery import build
+
+        try:
+            service = build(
+                "photoslibrary",
+                "v1",
+                credentials=credentials,
+                static_discovery=False,
+            )
+            result = service.albums().list(pageSize=50).execute()
+            albums = [
+                {
+                    "id": album["id"],
+                    "title": album.get("title", ""),
+                    "media_items_count": album.get("mediaItemsCount", "0"),
+                    "cover_photo_url": album.get(
+                        "coverPhotoBaseUrl", ""
+                    ),
+                }
+                for album in result.get("albums", [])
+            ]
+            return Response(albums)
+        except Exception as exc:
+            logger.exception("Failed to list Google Photos albums")
+            return Response(
+                {"detail": f"Google API error: {exc}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )

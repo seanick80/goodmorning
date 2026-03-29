@@ -43,7 +43,6 @@ apt-get install -y -qq \
     postgresql postgresql-client \
     nginx \
     chromium-browser \
-    cage \
     libpq-dev gcc \
     curl
 
@@ -153,45 +152,39 @@ ok "nginx configured."
 info "Installing systemd services..."
 cp "$APP_DIR/pi/goodmorning-web.service" /etc/systemd/system/
 cp "$APP_DIR/pi/goodmorning-scheduler.service" /etc/systemd/system/
-cp "$APP_DIR/pi/goodmorning-kiosk.service" /etc/systemd/system/
+
+# Remove old kiosk service if present (replaced by XDG autostart)
+rm -f /etc/systemd/system/goodmorning-kiosk.service
+
 systemctl daemon-reload
 systemctl enable goodmorning-web goodmorning-scheduler
 systemctl start goodmorning-web goodmorning-scheduler
 ok "Application services started."
 
 # -------------------------------------------------------------------
-# 9. Kiosk mode
+# 9. Kiosk mode (XDG autostart in pi user's desktop session)
 # -------------------------------------------------------------------
 info "Configuring kiosk mode..."
 
-# Auto-login for kiosk user via cage (Wayland compositor)
-mkdir -p /etc/systemd/system/getty@tty1.service.d
-cat > /etc/systemd/system/getty@tty1.service.d/autologin.conf <<EOF
-[Service]
-ExecStart=
-ExecStart=-/sbin/agetty --autologin $APP_USER --noclear %I \$TERM
-EOF
+# Remove old cage/getty kiosk approach if present
+rm -f /etc/systemd/system/getty@tty1.service.d/autologin.conf
+rmdir /etc/systemd/system/getty@tty1.service.d 2>/dev/null || true
+rm -f "/home/$APP_USER/.bash_profile"
 
-# Create .bash_profile that starts cage+chromium on login at tty1
-sudo -u "$APP_USER" bash -c "
-cat > /home/$APP_USER/.bash_profile <<'PROFILE'
-# Start kiosk on tty1 only
-if [ \"\$(tty)\" = \"/dev/tty1\" ]; then
-    exec cage -- chromium-browser \\
-        --kiosk \\
-        --noerrdialogs \\
-        --disable-translate \\
-        --no-first-run \\
-        --disable-infobars \\
-        --disable-session-crashed-bubble \\
-        --disable-features=TranslateUI \\
-        --check-for-update-interval=31536000 \\
-        --autoplay-policy=no-user-gesture-required \\
-        --password-store=basic \\
-        http://localhost
-fi
-PROFILE
-"
+# Create XDG autostart entry for the pi user's desktop session.
+# This launches Chromium with --start-fullscreen (not --kiosk) so that
+# F11 toggles fullscreen and the desktop session remains accessible.
+PI_HOME="/home/pi"
+AUTOSTART_DIR="$PI_HOME/.config/autostart"
+sudo -u pi mkdir -p "$AUTOSTART_DIR"
+sudo -u pi tee "$AUTOSTART_DIR/goodmorning-kiosk.desktop" > /dev/null <<'DESKTOP'
+[Desktop Entry]
+Type=Application
+Name=Good Morning Dashboard
+Exec=chromium-browser --start-fullscreen --noerrdialogs --disable-translate --no-first-run --disable-infobars --disable-session-crashed-bubble --disable-features=TranslateUI --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --password-store=basic http://localhost
+Hidden=false
+X-GNOME-Autostart-enabled=true
+DESKTOP
 
 # Disable screen blanking
 if command -v raspi-config &>/dev/null; then
@@ -203,7 +196,7 @@ if ! grep -q "hdmi_blanking=2" /boot/firmware/config.txt 2>/dev/null; then
     echo "hdmi_blanking=2" >> /boot/firmware/config.txt
 fi
 
-ok "Kiosk mode configured."
+ok "Kiosk mode configured (XDG autostart for pi user)."
 
 # -------------------------------------------------------------------
 # 10. Firewall (optional, if ufw is installed)
