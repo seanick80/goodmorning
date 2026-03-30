@@ -6,6 +6,8 @@ import logging
 from datetime import date, datetime, timedelta, timezone
 
 from django.contrib.auth.models import User
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -244,6 +246,7 @@ class WeatherLocationView(APIView):
         return Response({"detail": "Location updated.", "location_key": location_key})
 
 
+@method_decorator(ensure_csrf_cookie, name="dispatch")
 class AuthStatusView(APIView):
     """GET /api/auth/status/ -- return current auth state."""
 

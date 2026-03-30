@@ -1,13 +1,23 @@
 const BASE_URL = "/api";
 
+function getCSRFToken() {
+  const match = document.cookie.match(/csrftoken=([^;]+)/);
+  return match ? match[1] : "";
+}
+
 export async function apiFetch(path, options = {}) {
   const url = `${BASE_URL}${path}`;
+  const headers = {
+    "Content-Type": "application/json",
+    ...options.headers,
+  };
+  const method = (options.method || "GET").toUpperCase();
+  if (method !== "GET" && method !== "HEAD") {
+    headers["X-CSRFToken"] = getCSRFToken();
+  }
   const response = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      ...options.headers,
-    },
     ...options,
+    headers,
   });
 
   if (!response.ok) {
