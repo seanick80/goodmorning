@@ -8,6 +8,7 @@ from datetime import date, datetime, timedelta, timezone
 
 from dashboard.models import (
     CalendarEvent,
+    GlucoseReading,
     NewsHeadline,
     StockQuote,
     UserDashboard,
@@ -266,3 +267,56 @@ def fetch_google_photos() -> None:
                 "Failed to refresh Google Photos for %s",
                 dashboard.user.username,
             )
+
+
+def fetch_glucose() -> None:
+    """Fetch glucose readings from Dexcom for all configured glucose widgets."""
+    for dashboard in UserDashboard.objects.all():
+        for widget in dashboard.widget_layout:
+            if widget.get("widget") != "glucose" or not widget.get("enabled"):
+                continue
+
+            settings_ = widget.get("settings", {})
+            username = settings_.get("dexcom_username", "")
+            password = settings_.get("dexcom_password", "")
+            region = settings_.get("dexcom_region", "us")
+
+            if not username or not password:
+                continue
+
+            try:
+                from dashboard.services.glucose import fetch_glucose_readings
+
+                readings = fetch_glucose_readings(username, password, region)
+                if not readings:
+                    continue
+
+                for reading_data in readings:
+                    GlucoseReading.objects.update_or_create(
+                        user=dashboard.user,
+                        recorded_at=reading_data["recorded_at"],
+                        defaults={
+                            "value": reading_data["value"],
+                            "mmol_l": reading_data["mmol_l"],
+                            "trend_direction": reading_data["trend_direction"],
+                            "trend_arrow": reading_data["trend_arrow"],
+                        },
+                    )
+
+                # Purge readings older than 24 hours
+                cutoff = datetime.now(tz=timezone.utc) - timedelta(hours=24)
+                GlucoseReading.objects.filter(
+                    user=dashboard.user,
+                    recorded_at__lt=cutoff,
+                ).delete()
+
+                logger.info(
+                    "Glucose updated for %s (%d readings)",
+                    dashboard.user.username,
+                    len(readings),
+                )
+            except Exception:
+                logger.exception(
+                    "Failed to fetch glucose for %s",
+                    dashboard.user.username,
+                )

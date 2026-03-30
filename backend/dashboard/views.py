@@ -17,6 +17,7 @@ logger = logging.getLogger(__name__)
 
 from .models import (
     CalendarEvent,
+    GlucoseReading,
     NewsHeadline,
     StockQuote,
     UserDashboard,
@@ -24,6 +25,7 @@ from .models import (
 )
 from .serializers import (
     CalendarEventSerializer,
+    GlucoseReadingSerializer,
     NewsHeadlineSerializer,
     StockQuoteSerializer,
     UserDashboardSerializer,
@@ -148,6 +150,38 @@ class DashboardView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class GlucoseView(APIView):
+    """GET /api/glucose/ -- returns latest glucose reading + recent history."""
+
+    def get(self, request: object) -> Response:
+        from datetime import timedelta as td
+
+        user = User.objects.filter(is_superuser=True).first()
+        if user is None:
+            return Response(
+                {"detail": "No user configured."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        readings = GlucoseReading.objects.filter(user=user).order_by(
+            "-recorded_at",
+        )
+        if not readings.exists():
+            return Response(
+                {"detail": "No glucose data available yet."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        latest = readings.first()
+        cutoff = latest.recorded_at - td(hours=3)
+        history = readings.filter(recorded_at__gte=cutoff)
+
+        return Response({
+            "current": GlucoseReadingSerializer(latest).data,
+            "history": GlucoseReadingSerializer(history, many=True).data,
+        })
 
 
 class GeocodeView(APIView):

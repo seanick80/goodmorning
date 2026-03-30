@@ -4,6 +4,7 @@ from rest_framework import serializers
 
 from .models import (
     CalendarEvent,
+    GlucoseReading,
     NewsHeadline,
     StockQuote,
     UserDashboard,
@@ -55,6 +56,19 @@ class NewsHeadlineSerializer(serializers.ModelSerializer):
     class Meta:
         model = NewsHeadline
         fields = "__all__"
+
+
+class GlucoseReadingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GlucoseReading
+        fields = [
+            "value",
+            "mmol_l",
+            "trend_direction",
+            "trend_arrow",
+            "recorded_at",
+            "fetched_at",
+        ]
 
 
 class UserDashboardSerializer(serializers.ModelSerializer):

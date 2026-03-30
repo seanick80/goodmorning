@@ -148,3 +148,36 @@ class NewsHeadline(models.Model):
         return f"{self.source_name}: {self.title[:80]}"
 
 
+class GlucoseReading(models.Model):
+    """Cached glucose reading from Dexcom CGM."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="glucose_readings",
+    )
+    value = models.IntegerField(help_text="Blood glucose in mg/dL")
+    mmol_l = models.DecimalField(
+        max_digits=4,
+        decimal_places=1,
+        help_text="Blood glucose in mmol/L",
+    )
+    trend_direction = models.CharField(
+        max_length=30,
+        help_text="e.g. Flat, FortyFiveUp, SingleUp",
+    )
+    trend_arrow = models.CharField(
+        max_length=5,
+        help_text="Unicode trend arrow",
+    )
+    recorded_at = models.DateTimeField()
+    fetched_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Glucose Reading"
+        verbose_name_plural = "Glucose Readings"
+        ordering = ["-recorded_at"]
+        indexes = [models.Index(fields=["user", "-recorded_at"])]
+
+    def __str__(self) -> str:
+        return f"{self.value} mg/dL {self.trend_arrow} ({self.recorded_at})"

@@ -149,3 +149,24 @@
   width: 100%;
   accent-color: #7c6ef0;
 }
+
+.textInput {
+  width: 100%;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.textInput:focus {
+  border-color: rgba(124, 110, 240, 0.5);
+}
+
+.textInput::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
