@@ -123,7 +123,7 @@ class TestFetchGooglePhotos:
         user = _create_google_user(
             widget_layout=[
                 {
-                    "widget": "slideshow",
+                    "widget": "photos",
                     "enabled": True,
                     "position": 0,
                     "settings": {
@@ -146,7 +146,7 @@ class TestFetchGooglePhotos:
 
         dashboard = UserDashboard.objects.get(user=user)
         slideshow = next(
-            w for w in dashboard.widget_layout if w["widget"] == "slideshow"
+            w for w in dashboard.widget_layout if w["widget"] == "photos"
         )
         assert slideshow["settings"]["cached_media"] == mock_media
 
@@ -154,7 +154,7 @@ class TestFetchGooglePhotos:
         _create_google_user(
             widget_layout=[
                 {
-                    "widget": "slideshow",
+                    "widget": "photos",
                     "enabled": True,
                     "position": 0,
                     "settings": {},

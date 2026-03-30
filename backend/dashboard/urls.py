@@ -18,4 +18,5 @@ urlpatterns = [
     path("auth/google/photos/picker/", views.PhotosPickerCreateView.as_view(), name="photos-picker-create"),
     path("auth/google/photos/picker/<str:session_id>/", views.PhotosPickerPollView.as_view(), name="photos-picker-poll"),
     path("auth/google/photos/picker/<str:session_id>/media/", views.PhotosPickerMediaView.as_view(), name="photos-picker-media"),
+    path("photos/<int:index>/", views.PhotoProxyView.as_view(), name="photo-proxy"),
 ]

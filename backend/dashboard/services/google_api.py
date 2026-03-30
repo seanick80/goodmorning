@@ -219,10 +219,13 @@ def fetch_picker_media_items(
         data = resp.json()
 
         for item in data.get("mediaItems", []):
+            media_file = item.get("mediaFile", {})
             media_items.append({
                 "id": item.get("id", ""),
-                "base_url": item.get("baseUrl", ""),
-                "mime_type": item.get("mimeType", ""),
+                "base_url": media_file.get("baseUrl", ""),
+                "mime_type": media_file.get("mimeType", ""),
+                "width": media_file.get("mediaFileMetadata", {}).get("width", 0),
+                "height": media_file.get("mediaFileMetadata", {}).get("height", 0),
             })
 
         page_token = data.get("nextPageToken")

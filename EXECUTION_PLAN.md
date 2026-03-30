@@ -20,14 +20,30 @@ The Good Morning Dashboard is a personal morning information display designed to
 - Single-user focus (multi-user model in place but no auth UI yet)
 - Django admin for configuration; no custom settings UI in React yet
 
-**Out of scope for Phase 6.1:**
+**Out of scope for Phase 6.1 (completed separately):**
 
-- Docker Compose deployment
-- PostgreSQL as active database
-- Google OAuth / Calendar API integration
+- ~~Docker Compose deployment~~ — PostgreSQL via Docker Compose for dev
+- ~~PostgreSQL as active database~~ — PostgreSQL in all environments
+- ~~Google OAuth / Calendar API integration~~ — **DONE** (django-allauth, Google Calendar + Photos Picker)
 - PWA / kiosk mode
 - WebSocket / SSE real-time updates
-- Raspberry Pi deployment
+- ~~Raspberry Pi deployment~~ — **DONE** (Pi 5, native PostgreSQL + nginx + gunicorn)
+
+---
+
+## Completion Summary (as of 2026-03-30)
+
+| Area | Status |
+|------|--------|
+| Core dashboard (weather, stocks, calendar, news, clock) | DONE |
+| PostgreSQL (Docker dev, native Pi) | DONE |
+| Raspberry Pi deployment (Pi 5, kiosk mode) | DONE |
+| Google OAuth (django-allauth, Calendar + Photos) | DONE |
+| Background photo slideshow (Google Photos Picker) | DONE |
+| CSRF token handling in frontend | DONE |
+| Test suite: 116 backend + 22 frontend (vitest) | DONE |
+| Dexcom glucose widget | Not started |
+| Privacy policy page | Not started |
 
 ---
 
@@ -2176,29 +2192,28 @@ See Section 11 above.
 
 ## 13. Future Work
 
-### Near-Term (Phase 6.2 - 6.3)
+### Near-Term (Phase 6.2 - 6.3) — DONE
 
-- **PostgreSQL migration:** Switch from SQLite to PostgreSQL via Docker Compose. Set `DATABASE_URL` in `.env`. Use `dumpdata`/`loaddata` to migrate existing data.
-- **Docker Compose deployment:** Single `docker compose up` for the full stack (Django + PostgreSQL + nginx). See FRAMEWORK_ANALYSIS.md section 6.5 for the compose file structure.
-- **Raspberry Pi deployment:** Same Docker Compose with `platform: linux/arm64/v8`. Tuned PostgreSQL settings for 1 GB RAM.
+- ~~**PostgreSQL migration:**~~ PostgreSQL via Docker Compose for dev, native on Pi.
+- ~~**Raspberry Pi deployment:**~~ Live on Pi 5 (goodmorning.local). Native PostgreSQL + nginx + gunicorn, XDG autostart fullscreen Chromium kiosk. Manual scp+rsync deployment (deploy.sh doesn't handle full Pi deployment).
+- **Docker Compose deployment:** Dev only (PostgreSQL container). No full-stack Docker Compose.
 
-### Google Account Integration (Phase 7) — IN PROGRESS
+### Google Account Integration (Phase 7) — DONE
 
-- **OAuth 2.0 flow:** Use `django-allauth` with Google provider. Requires Google Cloud Console project, OAuth consent screen, and client ID/secret.
-- **Setup:** GCP project in Testing mode — no privacy policy, verification, or domain ownership needed. Up to 100 test users. "This app isn't verified" warning on first login (click through once).
-- **Required scopes:**
-  - `profile`, `email` — user identity
-  - `https://www.googleapis.com/auth/calendar.readonly` — calendar access
-  - `https://www.googleapis.com/auth/photoslibrary.readonly` — photos access
-- **What it unlocks:**
-  - Google Calendar API (real-time event sync, faster than ICS feeds)
-  - Google Photos API (album selection for slideshow widget)
-  - User authentication (replace AllowAny with proper per-user auth)
-  - Profile info (display name, avatar on dashboard)
-  - Gmail integration (unread count widget, future)
-- **Implementation:** `django-allauth[socialaccount]`, Google provider, `access_type=offline` for refresh tokens (allows background jobs to keep fetching without re-auth).
-- **Per-user calendar auto-discovery:** Google Calendar API auto-discovers user's calendars. Replace the current `USER_CALENDAR` env var and manual ICS URL approach with an authenticated calendar picker. ICS feeds remain as fallback for non-Google calendars.
-- **Google Photos album picker:** User selects a Google Photos album via settings UI. Background job caches album contents every 30-60 minutes. Frontend slideshow pulls from cached media URLs.
+- **OAuth 2.0 flow:** `django-allauth` with Google provider. GCP project in Testing mode.
+- **Required scopes:** `profile`, `email`, `calendar.readonly`, `photospicker.mediaitems.readonly`
+- **What was implemented:**
+  - Google Calendar API — real-time event sync via background jobs, replaced ICS feeds
+  - Google Photos Picker API — album/photo selection, background photo slideshow
+  - Photo proxy endpoint (`/api/photos/<index>/`) serves images through backend with Google OAuth
+  - Picker API baseUrls expire; proxy auto-refreshes from Picker API on 403
+  - Frontend auth UI: AuthStatus, CalendarPicker, PhotosPicker components
+  - CSRF token handling added to frontend `apiFetch`
+- **Architecture notes:**
+  - Google account user ("nick") and dashboard owner ("admin") are different users
+  - Background jobs use first Google-linked account for API credentials
+  - Widget name is "photos" (not "slideshow") in `widget_layout`
+  - `access_type=offline` for refresh tokens — background jobs keep working without re-auth
 - **Redirect URIs:** `http://goodmorning.local/api/auth/callback/` (Pi), `http://localhost:8000/api/auth/callback/` (dev)
 
 ### Additional Widgets
@@ -2207,7 +2222,7 @@ See Section 11 above.
 |--------|-----------|------------|
 | ~~News headlines~~ | ~~RSS feeds~~ | **Implemented in Phase 6.1** |
 | Transit/commute | Google Maps Directions API | Medium |
-| Photo slideshow | Local folder or Google Photos API | Medium (see details below) |
+| ~~Photo slideshow~~ | ~~Google Photos Picker API~~ | **Implemented — background slideshow via Google Photos** |
 | Reminders/to-do | Google Tasks API or local model | Low |
 | System status | psutil (CPU, RAM, disk) | Low |
 | Dexcom glucose | pydexcom (Dexcom Share API, no dev account needed) | Medium (see details below) |
@@ -2242,28 +2257,24 @@ Display real-time CGM (continuous glucose monitor) readings from a Dexcom sensor
 - Share API is undocumented — could break if Dexcom changes their backend (has been stable for years)
 - Fallback: Nightscout (self-hosted Node.js middleware) if Share API is blocked
 
-### Photo Slideshow Mode
+### Photo Slideshow Mode — DONE
 
-A full-screen or widget-based slideshow that rotates through the user's favorite photos on the dashboard.
+Background photo slideshow implemented using Google Photos Picker API.
 
-**Phase 1 — Local folder:**
-- User configures a local image folder path in dashboard settings (e.g., `SLIDESHOW_FOLDER` env var or widget settings).
-- Backend serves images via a new `/api/slideshow/` endpoint that lists available images and serves them.
-- Frontend displays images full-screen behind the dashboard (background slideshow) or as a dedicated widget card, cross-fading every 30–60 seconds (configurable).
-- Shuffle or sequential ordering, configurable.
+**Implementation:**
+- Google Photos Picker API for photo selection (not the deprecated Library API)
+- Photos proxied through backend via `/api/photos/<index>/` (avoids CORS, handles auth)
+- Picker API `baseUrl`s expire; proxy auto-refreshes from Picker API on 403
+- Full-screen background behind all widgets with dark overlay
+- Crossfade transitions between photos
+- Frontend `PhotoBackground` component handles cycling and transitions
 
-**Phase 2 — Google Photos integration:**
-- Requires Google OAuth (see Google Account Integration above).
-- User selects a specific Google Photos album from their account via a settings picker.
-- Backend fetches album media items via the Google Photos API, caches thumbnails/URLs.
-- Frontend displays photos the same way as Phase 1, sourced from the cached album.
-
-**Design considerations:**
-- Photos should be displayed with a subtle Ken Burns (pan/zoom) effect for visual interest.
-- When used as a background, apply a dark overlay so widgets remain readable.
-- Transition styles: crossfade (default), slide, or fade-to-black.
-- Respect image orientation/EXIF data.
-- **Widget transparency:** Widget cards should use semi-transparent backgrounds (50–75% opacity) so the background image shows through subtly. This replaces the current opaque glass-morphism cards. The transparency level should be configurable per-user in dashboard settings.
+**Not implemented (deferred):**
+- Local folder mode (Phase 1 skipped — went straight to Google Photos)
+- Ken Burns pan/zoom effect
+- Multiple transition styles (only crossfade)
+- Configurable widget transparency
+- Sequential ordering (shuffle only)
 
 ### UI Enhancements
 

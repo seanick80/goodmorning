@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from rest_framework.test import APIClient
@@ -225,6 +225,101 @@ class TestPhotosPickerMediaView:
         assert len(data) == 2
         assert data[0]["id"] == "1"
         assert data[1]["mime_type"] == "image/png"
+
+
+class TestPhotoProxyView:
+    def _make_photos_dashboard(self, superuser, cached_media: list | None = None):
+        """Create a dashboard with a photos widget containing cached_media."""
+        media = cached_media or []
+        return UserDashboardFactory(
+            user=superuser,
+            widget_layout=[
+                {
+                    "widget": "photos",
+                    "enabled": True,
+                    "position": 0,
+                    "settings": {
+                        "cached_media": media,
+                        "picker_session_id": "session-abc",
+                    },
+                },
+            ],
+        )
+
+    def _create_google_account(self, user):
+        """Create a SocialApp, SocialAccount, and SocialToken for Google."""
+        from allauth.socialaccount.models import SocialAccount, SocialApp, SocialToken
+        from django.contrib.sites.models import Site
+
+        app = SocialApp.objects.create(
+            provider="google",
+            name="Google",
+            client_id="test-client-id",
+            secret="test-client-secret",
+        )
+        site = Site.objects.get(id=1)
+        app.sites.add(site)
+
+        account = SocialAccount.objects.create(
+            user=user, provider="google", uid="g-proxy-test", extra_data={},
+        )
+        SocialToken.objects.create(
+            account=account,
+            app=app,
+            token="access-token-xyz",
+            token_secret="refresh-token-xyz",
+        )
+        return account
+
+    def test_returns_404_when_no_dashboard(self, api_client):
+        response = api_client.get("/api/photos/0/")
+        assert response.status_code == 404
+
+    def test_returns_404_for_invalid_index(self, api_client, superuser):
+        self._make_photos_dashboard(superuser, cached_media=[
+            {"base_url": "https://lh3.google.com/a"},
+            {"base_url": "https://lh3.google.com/b"},
+        ])
+        response = api_client.get("/api/photos/5/")
+        assert response.status_code == 404
+
+    @patch("requests.get")
+    @patch("dashboard.services.google_api.get_google_credentials")
+    def test_returns_image_via_proxy(
+        self, mock_get_creds, mock_requests_get, api_client, superuser,
+    ):
+        self._make_photos_dashboard(superuser, cached_media=[
+            {"base_url": "https://lh3.google.com/photo1"},
+        ])
+        self._create_google_account(superuser)
+
+        mock_creds = MagicMock()
+        mock_creds.token = "fake-token"
+        mock_creds.expired = False
+        mock_get_creds.return_value = mock_creds
+
+        mock_resp = MagicMock()
+        mock_resp.status_code = 200
+        mock_resp.content = b"fake-image-data"
+        mock_resp.headers = {"Content-Type": "image/jpeg"}
+        mock_resp.raise_for_status = MagicMock()
+        mock_requests_get.return_value = mock_resp
+
+        response = api_client.get("/api/photos/0/")
+
+        assert response.status_code == 200
+        assert response.content == b"fake-image-data"
+
+    @patch("dashboard.services.google_api.get_google_credentials")
+    def test_returns_400_when_no_google_account(
+        self, mock_get_creds, api_client, superuser,
+    ):
+        self._make_photos_dashboard(superuser, cached_media=[
+            {"base_url": "https://lh3.google.com/photo1"},
+        ])
+        # No SocialAccount created -- view checks for google account before credentials
+        response = api_client.get("/api/photos/0/")
+        assert response.status_code == 400
 
 
 class TestCSRFCookie:

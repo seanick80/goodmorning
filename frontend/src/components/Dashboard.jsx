@@ -6,6 +6,7 @@ import CalendarWidget from "./widgets/CalendarWidget";
 import NewsWidget from "./widgets/NewsWidget";
 import AuthStatus from "./AuthStatus";
 import SettingsPanel from "./SettingsPanel";
+import BackgroundSlideshow from "./BackgroundSlideshow";
 import { useDashboard } from "../hooks/useDashboard";
 import styles from "./Dashboard.module.css";
 
@@ -16,6 +17,7 @@ export default function Dashboard() {
 
   return (
     <div className={styles.wrapper}>
+      <BackgroundSlideshow />
       <header className={styles.header}>
         <AuthStatus />
         <button

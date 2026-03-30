@@ -9,6 +9,7 @@ from django.contrib.auth.models import User
 from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework import status
+from django.http import HttpResponse
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -402,5 +403,126 @@ class PhotosPickerMediaView(APIView):
             logger.exception("Failed to fetch Picker media items")
             return Response(
                 {"detail": f"Google API error: {exc}"},
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
+
+class PhotoProxyView(APIView):
+    """GET /api/photos/<index>/ -- proxy a cached Google Photos image.
+
+    Streams the image through the backend since Picker API baseUrls
+    require authentication and can't be loaded directly in the browser.
+    """
+
+    def get(self, request: object, index: int) -> HttpResponse:
+        import requests as http_requests
+
+        from .services.google_api import (
+            fetch_picker_media_items,
+            get_google_credentials,
+        )
+
+        user = User.objects.filter(is_superuser=True).first()
+        if user is None or not hasattr(user, "dashboard"):
+            return Response(
+                {"detail": "No dashboard configured."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        dashboard = user.dashboard
+        photos = []
+        session_id = ""
+        for widget in dashboard.widget_layout:
+            if widget.get("widget") == "photos":
+                photos = widget.get("settings", {}).get("cached_media", [])
+                session_id = widget.get("settings", {}).get(
+                    "picker_session_id", ""
+                )
+                break
+
+        if index < 0 or index >= len(photos):
+            return Response(
+                {"detail": "Photo not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        from allauth.socialaccount.models import SocialAccount
+
+        google_account = SocialAccount.objects.filter(
+            provider="google",
+        ).first()
+        if not google_account:
+            return Response(
+                {"detail": "No Google account connected."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        credentials = get_google_credentials(google_account.user)
+        if not credentials:
+            return Response(
+                {"detail": "Google credentials unavailable."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        width = request.query_params.get("w", "1920")
+        height = request.query_params.get("h", "1080")
+        base_url = photos[index].get("base_url", "")
+
+        # Try cached URL first; if stale (403), refresh from Picker API
+        if base_url:
+            url = f"{base_url}=w{width}-h{height}"
+            resp = http_requests.get(
+                url,
+                headers={"Authorization": f"Bearer {credentials.token}"},
+                timeout=15,
+            )
+            if resp.status_code == 200:
+                return HttpResponse(
+                    resp.content,
+                    content_type=resp.headers.get("Content-Type", "image/jpeg"),
+                    headers={"Cache-Control": "public, max-age=300"},
+                )
+
+        # Refresh URLs from Picker API
+        if not session_id:
+            return Response(
+                {"detail": "No picker session."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        try:
+            fresh = fetch_picker_media_items(google_account.user, session_id)
+            if fresh:
+                # Update cache in DB
+                for widget in dashboard.widget_layout:
+                    if widget.get("widget") == "photos":
+                        widget["settings"]["cached_media"] = fresh
+                        break
+                dashboard.save()
+                photos = fresh
+
+            if index >= len(photos):
+                return Response(
+                    {"detail": "Photo not found."},
+                    status=status.HTTP_404_NOT_FOUND,
+                )
+
+            base_url = photos[index].get("base_url", "")
+            url = f"{base_url}=w{width}-h{height}"
+            resp = http_requests.get(
+                url,
+                headers={"Authorization": f"Bearer {credentials.token}"},
+                timeout=15,
+            )
+            resp.raise_for_status()
+            return HttpResponse(
+                resp.content,
+                content_type=resp.headers.get("Content-Type", "image/jpeg"),
+                headers={"Cache-Control": "public, max-age=300"},
+            )
+        except Exception:
+            logger.exception("Failed to proxy photo %d", index)
+            return Response(
+                {"detail": "Failed to fetch photo."},
                 status=status.HTTP_502_BAD_GATEWAY,
             )

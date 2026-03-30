@@ -151,23 +151,25 @@ def fetch_news() -> None:
 
 
 def fetch_google_calendar() -> None:
-    """Fetch calendar events via Google Calendar API for connected users."""
+    """Fetch calendar events via Google Calendar API.
+
+    Uses the first available Google account for API credentials and
+    checks all dashboards for configured google_calendar_ids (single-user
+    kiosk model where dashboard owner and Google account may differ).
+    """
     from allauth.socialaccount.models import SocialAccount
 
     from dashboard.services.google_api import fetch_google_calendar_events
 
-    google_users = SocialAccount.objects.filter(
+    google_account = SocialAccount.objects.filter(
         provider="google",
-    ).select_related("user")
+    ).select_related("user").first()
+    if not google_account:
+        return
 
-    for social_account in google_users:
-        user = social_account.user
-        try:
-            dashboard = user.dashboard
-        except UserDashboard.DoesNotExist:
-            continue
+    google_user = google_account.user
 
-        # Find selected Google calendar IDs from widget settings
+    for dashboard in UserDashboard.objects.all():
         calendar_ids: list[str] = []
         for widget in dashboard.widget_layout:
             if widget.get("widget") == "calendar":
@@ -180,10 +182,9 @@ def fetch_google_calendar() -> None:
             continue
 
         try:
-            events = fetch_google_calendar_events(user, calendar_ids)
+            events = fetch_google_calendar_events(google_user, calendar_ids)
 
-            # Use "google:" prefix for source_url to distinguish from ICS
-            source_key = f"google:{user.id}"
+            source_key = f"google:{google_user.id}"
             today_start = datetime.combine(
                 date.today(), datetime.min.time(), tzinfo=timezone.utc,
             )
@@ -202,40 +203,40 @@ def fetch_google_calendar() -> None:
                 )
             logger.info(
                 "Google Calendar updated for %s (%d events)",
-                user.username,
+                dashboard.user.username,
                 len(events),
             )
         except Exception:
             logger.exception(
-                "Failed to fetch Google Calendar for %s", user.username,
+                "Failed to fetch Google Calendar for %s",
+                dashboard.user.username,
             )
 
 
 def fetch_google_photos() -> None:
-    """Refresh Google Photos Picker media URLs for slideshow widgets.
+    """Refresh Google Photos Picker media URLs for photos widgets.
 
     The Picker API baseUrls expire, so this job re-fetches them from
-    the stored picker session ID. If the session has expired, the user
-    will need to re-pick photos via the UI.
+    the stored picker session ID. Uses the first available Google account
+    for API credentials (single-user kiosk model).
     """
     from allauth.socialaccount.models import SocialAccount
 
     from dashboard.services.google_api import fetch_picker_media_items
 
-    google_users = SocialAccount.objects.filter(
+    # Find a Google-connected user for API credentials
+    google_account = SocialAccount.objects.filter(
         provider="google",
-    ).select_related("user")
+    ).select_related("user").first()
+    if not google_account:
+        return
 
-    for social_account in google_users:
-        user = social_account.user
-        try:
-            dashboard = user.dashboard
-        except UserDashboard.DoesNotExist:
-            continue
+    google_user = google_account.user
 
+    for dashboard in UserDashboard.objects.all():
         session_id = ""
         for widget in dashboard.widget_layout:
-            if widget.get("widget") == "slideshow":
+            if widget.get("widget") == "photos":
                 session_id = widget.get("settings", {}).get(
                     "picker_session_id", ""
                 )
@@ -245,22 +246,23 @@ def fetch_google_photos() -> None:
             continue
 
         try:
-            media = fetch_picker_media_items(user, session_id)
+            media = fetch_picker_media_items(google_user, session_id)
             if not media:
                 continue
 
             for widget in dashboard.widget_layout:
-                if widget.get("widget") == "slideshow":
+                if widget.get("widget") == "photos":
                     widget["settings"]["cached_media"] = media
                     break
             dashboard.save()
 
             logger.info(
                 "Google Photos refreshed for %s (%d items)",
-                user.username,
+                dashboard.user.username,
                 len(media),
             )
         except Exception:
             logger.exception(
-                "Failed to refresh Google Photos for %s", user.username,
+                "Failed to refresh Google Photos for %s",
+                dashboard.user.username,
             )
