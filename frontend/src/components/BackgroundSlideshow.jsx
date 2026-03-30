@@ -1,43 +1,76 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useDashboard } from "../hooks/useDashboard";
 import styles from "./BackgroundSlideshow.module.css";
 
-function getPhotoCount(dashboard) {
-  if (!dashboard?.widget_layout) return 0;
+const DEFAULT_INTERVAL = 60;
+const FADE_DURATION = 2000;
+
+function getPhotosConfig(dashboard) {
+  if (!dashboard?.widget_layout) return { count: 0, interval: DEFAULT_INTERVAL };
   const widget = dashboard.widget_layout.find((w) => w.widget === "photos");
-  return widget?.settings?.cached_media?.length ?? 0;
+  if (!widget) return { count: 0, interval: DEFAULT_INTERVAL };
+  const media = widget.settings?.cached_media ?? [];
+  const interval = widget.settings?.interval_seconds ?? DEFAULT_INTERVAL;
+  return { count: media.length, interval };
 }
 
 export default function BackgroundSlideshow() {
   const { data: dashboard } = useDashboard();
-  const count = getPhotoCount(dashboard);
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const [loaded, setLoaded] = useState(false);
+  const { count, interval } = getPhotosConfig(dashboard);
+  const [current, setCurrent] = useState(0);
+  const [next, setNext] = useState(null);
+  const [phase, setPhase] = useState("showing"); // "showing" | "preloading" | "fading"
   const timerRef = useRef(null);
+  const preloadRef = useRef(null);
+
+  const advance = useCallback(() => {
+    if (count <= 1) return;
+    const nextIdx = (current + 1) % count;
+    setNext(nextIdx);
+    setPhase("preloading");
+
+    // Preload the next image
+    const img = new Image();
+    preloadRef.current = img;
+    img.onload = () => {
+      setPhase("fading");
+      setTimeout(() => {
+        setCurrent(nextIdx);
+        setNext(null);
+        setPhase("showing");
+      }, FADE_DURATION);
+    };
+    img.onerror = () => {
+      // Skip to next on error
+      setCurrent(nextIdx);
+      setNext(null);
+      setPhase("showing");
+    };
+    img.src = `/api/photos/${nextIdx}/?w=1920&h=1080`;
+  }, [current, count]);
 
   useEffect(() => {
     if (count <= 1) return;
-    timerRef.current = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % count);
-      setLoaded(false);
-    }, 30000);
+    timerRef.current = setInterval(advance, interval * 1000);
     return () => clearInterval(timerRef.current);
-  }, [count]);
+  }, [count, interval, advance]);
 
   if (count === 0) return null;
-
-  const index = currentIndex % count;
-  const url = `/api/photos/${index}/?w=1920&h=1080`;
 
   return (
     <div className={styles.container}>
       <img
-        key={index}
-        src={url}
+        src={`/api/photos/${current}/?w=1920&h=1080`}
         alt=""
-        className={`${styles.image} ${loaded ? styles.loaded : ""}`}
-        onLoad={() => setLoaded(true)}
+        className={`${styles.image} ${phase === "fading" ? styles.fadeOut : styles.visible}`}
       />
+      {next !== null && (
+        <img
+          src={`/api/photos/${next}/?w=1920&h=1080`}
+          alt=""
+          className={`${styles.image} ${styles.nextImage} ${phase === "fading" ? styles.visible : ""}`}
+        />
+      )}
       <div className={styles.overlay} />
     </div>
   );

@@ -135,3 +135,17 @@
   color: #e06b6b;
   margin: 0.25rem 0 0.5rem;
 }
+
+.sliderLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0.75rem 0;
+}
+
+.slider {
+  width: 100%;
+  accent-color: #7c6ef0;
+}

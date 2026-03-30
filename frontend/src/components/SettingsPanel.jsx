@@ -10,15 +10,27 @@ import {
 } from "../api/auth";
 import styles from "./SettingsPanel.module.css";
 
+function getSavedInterval(dashboard) {
+  if (!dashboard?.widget_layout) return 60;
+  const photoWidget = dashboard.widget_layout.find((w) => w.widget === "photos");
+  return photoWidget?.settings?.interval_seconds ?? 60;
+}
+
 function PhotosPicker() {
   const queryClient = useQueryClient();
   const { data: dashboard } = useDashboard();
   const [status, setStatus] = useState("idle");
   const [photoCount, setPhotoCount] = useState(null);
+  const [interval, setInterval_] = useState(() => getSavedInterval(dashboard));
   const pollRef = useRef(null);
+  const intervalSaveRef = useRef(null);
 
   const savedSessionId = getSavedPickerSessionId(dashboard);
   const savedPhotoCount = getSavedPhotoCount(dashboard);
+
+  useEffect(() => {
+    setInterval_(getSavedInterval(dashboard));
+  }, [dashboard]);
 
   const cleanup = useCallback(() => {
     if (pollRef.current) {
@@ -85,11 +97,42 @@ function PhotosPicker() {
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   }
 
+  function handleIntervalChange(e) {
+    const val = Number(e.target.value);
+    setInterval_(val);
+    clearTimeout(intervalSaveRef.current);
+    intervalSaveRef.current = setTimeout(() => {
+      const widgetLayout = dashboard?.widget_layout ?? [];
+      const updatedLayout = widgetLayout.map((w) =>
+        w.widget === "photos"
+          ? { ...w, settings: { ...w.settings, interval_seconds: val } }
+          : w
+      );
+      patchDashboard({ widget_layout: updatedLayout }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      });
+    }, 500);
+  }
+
   return (
     <div className={styles.section}>
       <h3 className={styles.sectionTitle}>Background Images</h3>
       {savedSessionId && savedPhotoCount > 0 && status !== "done" && (
         <p className={styles.info}>{savedPhotoCount} photos selected</p>
+      )}
+      {savedPhotoCount > 1 && (
+        <label className={styles.sliderLabel}>
+          <span>Rotate every {interval}s</span>
+          <input
+            type="range"
+            min="15"
+            max="300"
+            step="5"
+            value={interval}
+            onChange={handleIntervalChange}
+            className={styles.slider}
+          />
+        </label>
       )}
       {status === "idle" && (
         <button
