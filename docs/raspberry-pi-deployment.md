@@ -283,6 +283,25 @@ The Pi runs as a single-purpose dashboard display using the `pi` user's desktop 
 
 ---
 
+## Google OAuth on the Pi
+
+After deploying, the Google OAuth flow requires additional setup:
+
+1. **`.env` must include** `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+2. **CSRF trusted origins** in `settings.py` includes `http://goodmorning.local`
+3. **Social app configuration:** After first deploy, create the Google social app via Django admin (`/admin/socialaccount/socialapp/`)
+4. **Reconnecting accounts:** If OAuth tokens expire, use the Settings panel's "Reconnect" link
+5. **Photos and Calendar:** Both require the Google account to be connected — background jobs use the first available Google-linked account for API credentials
+
+### Deploy checklist for Google features
+
+- [ ] `.env` has `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET`
+- [ ] Django admin has Google social app configured with correct client ID/secret
+- [ ] At least one user has connected their Google account via `/accounts/google/login/`
+- [ ] Background scheduler is running (photos and calendar refresh automatically)
+
+---
+
 ## Security Considerations
 
 - SSH key auth only (disable password auth after setup)

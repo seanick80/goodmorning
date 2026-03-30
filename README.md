@@ -6,9 +6,9 @@ A full-stack web dashboard designed for a tablet display in a living room. Shows
 
 ## Tech Stack
 
-- **Backend:** Django 6.0 + Django REST Framework
-- **Frontend:** React 19 + Vite + TypeScript
-- **Database:** PostgreSQL 16 via Docker (SQLite fallback for offline dev)
+- **Backend:** Django 5.2 LTS + Django REST Framework + django-allauth (Google OAuth)
+- **Frontend:** React 19 + Vite, CSS Modules
+- **Database:** PostgreSQL 16 (Docker for dev, native on Pi)
 - **Scheduler:** django-apscheduler for periodic data fetching
 - **Styling:** CSS Modules, dark gradient theme with glass-morphism cards
 
@@ -19,14 +19,17 @@ A full-stack web dashboard designed for a tablet display in a living room. Shows
 | Clock | Client-side | Every second |
 | Weather | Open-Meteo API (no key required) | Every 15 minutes |
 | Stocks | Finnhub API (free tier) | Every 5 minutes |
-| Calendar | ICS feed (Google/Outlook/iCloud) | Every 30 minutes |
+| Calendar | Google Calendar API (OAuth) | Every 30 minutes |
 | News | RSS feeds (BBC, NPR, Reuters) | Every 60 minutes |
+| Photos | Google Photos Picker API | Configurable (15-300s) |
 
 ## Layout
 
 Uses a **Hero layout** (60/40 split):
 - **Left panel:** Clock (multi-timezone: primary + 2 aux) and Weather
 - **Right panel:** Stocks, Calendar, and News stacked vertically
+
+Background photo slideshow from Google Photos with configurable crossfade interval.
 
 ## Quick Start
 
@@ -89,12 +92,12 @@ After startup:
 
 ### Run Tests
 ```bash
-# Backend (67 tests) — requires PostgreSQL running
+# Backend (120 tests) — requires PostgreSQL running
 cd backend
 source .venv/Scripts/activate
 python -m pytest -v
 
-# Frontend
+# Frontend (22 tests)
 cd frontend
 npm test
 ```
@@ -109,9 +112,10 @@ Copy `backend/.env.example` to `backend/.env` and configure:
 | `DEBUG` | No | Default: True |
 | `DATABASE_URL` | No | Default: SQLite. Set to `postgres://...` for PostgreSQL |
 | `FINNHUB_API_KEY` | For stocks | Free at finnhub.io |
-| `USER_CALENDAR` | For calendar | ICS feed URL (Google/Outlook/iCloud) |
 | `WEATHER_LAT` | No | Latitude (default: 40.7128 / NYC) |
 | `WEATHER_LON` | No | Longitude (default: -74.0060 / NYC) |
+| `GOOGLE_CLIENT_ID` | For Google | Google OAuth client ID |
+| `GOOGLE_CLIENT_SECRET` | For Google | Google OAuth client secret |
 
 ## API Endpoints
 
@@ -124,6 +128,11 @@ Copy `backend/.env.example` to `backend/.env` and configure:
 | `/api/news/` | GET | Recent news headlines |
 | `/api/dashboard/` | GET, PATCH | User dashboard configuration |
 | `/api/geocode/` | GET | City search for location picker |
+| `/api/auth/status/` | GET | Auth status + CSRF cookie |
+| `/api/photos/<index>/` | GET | Photo proxy (Google Photos) |
+| `/api/photos/picker/session/` | POST | Create Photos Picker session |
+| `/api/photos/picker/session/<id>/poll/` | GET | Poll picker session status |
+| `/api/photos/picker/session/<id>/media/` | GET | Fetch picker media items |
 
 ## Project Structure
 
@@ -147,6 +156,8 @@ goodmorning/
         widgets/      # ClockWidget, WeatherWidget, StocksWidget, CalendarWidget, NewsWidget
         mocks/        # UI layout and widget design mockups
         Dashboard.jsx # Main Hero layout
+        BackgroundSlideshow.jsx  # Google Photos slideshow
+        SettingsPanel.jsx        # Settings panel (photos, Google account)
   docker-compose.yml  # PostgreSQL 16
   deploy.sh           # One-command bootstrap & startup
 ```
@@ -156,13 +167,12 @@ goodmorning/
 | Target | Database | Status |
 |--------|----------|--------|
 | Local Windows + Docker | PostgreSQL 16 | Working |
-| Raspberry Pi | PostgreSQL (tuned) | Planned |
-| Cloud (Render/Railway) | PostgreSQL (managed) | Planned |
+| Raspberry Pi | PostgreSQL 16 (native) | Working |
 
 ## Future Work
 
-- Google Account integration (OAuth, Calendar API)
-- Raspberry Pi deployment with tuned PostgreSQL
+- Dexcom glucose widget (for monitoring CGM data)
+- Photo Frame Mode (fullscreen photo-only, no widgets)
+- Privacy Policy page (needed for Google verification)
 - PWA support (tablet home screen install)
 - Theme customization (dark/light modes)
-- Additional widgets (transit, photos, reminders)
