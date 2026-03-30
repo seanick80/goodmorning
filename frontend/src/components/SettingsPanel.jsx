@@ -180,6 +180,121 @@ function PhotosPicker() {
   );
 }
 
+function getDexcomSettings(dashboard) {
+  if (!dashboard?.widget_layout) return { username: "", password: "", region: "us" };
+  const widget = dashboard.widget_layout.find((w) => w.widget === "glucose");
+  if (!widget?.settings) return { username: "", password: "", region: "us" };
+  return {
+    username: widget.settings.dexcom_username || "",
+    password: widget.settings.dexcom_password || "",
+    region: widget.settings.dexcom_region || "us",
+  };
+}
+
+function DexcomSettings() {
+  const queryClient = useQueryClient();
+  const { data: dashboard } = useDashboard();
+  const defaults = getDexcomSettings(dashboard);
+  const [username, setUsername] = useState(defaults.username);
+  const [password, setPassword] = useState(defaults.password);
+  const [region, setRegion] = useState(defaults.region);
+  const [saved, setSaved] = useState(false);
+
+  async function handleSave() {
+    const widgetLayout = dashboard?.widget_layout ?? [];
+    const glucoseWidget = widgetLayout.find((w) => w.widget === "glucose");
+    const updatedSettings = {
+      ...(glucoseWidget?.settings ?? {}),
+      dexcom_username: username,
+      dexcom_password: password,
+      dexcom_region: region,
+    };
+    const updatedLayout = widgetLayout.map((w) =>
+      w.widget === "glucose" ? { ...w, settings: updatedSettings } : w
+    );
+    if (!glucoseWidget) {
+      updatedLayout.push({
+        widget: "glucose",
+        enabled: true,
+        position: updatedLayout.length,
+        settings: updatedSettings,
+      });
+    }
+    await patchDashboard({ widget_layout: updatedLayout });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }
+
+  return (
+    <div className={styles.section}>
+      <h3 className={styles.sectionTitle}>Dexcom Glucose Monitor</h3>
+      <label className={styles.sliderLabel}>
+        <span>Username (email or phone)</span>
+        <input
+          type="text"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          className={styles.textInput}
+          placeholder="email@example.com"
+        />
+      </label>
+      <label className={styles.sliderLabel}>
+        <span>Password</span>
+        <input
+          type="password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          className={styles.textInput}
+        />
+      </label>
+      <label className={styles.sliderLabel}>
+        <span>Region</span>
+        <select
+          value={region}
+          onChange={(e) => setRegion(e.target.value)}
+          className={styles.textInput}
+        >
+          <option value="us">US</option>
+          <option value="ous">Outside US</option>
+          <option value="jp">Japan</option>
+        </select>
+      </label>
+      {saved && <p className={styles.success}>Saved!</p>}
+      <button
+        type="button"
+        onClick={handleSave}
+        className={styles.actionButton}
+        disabled={!username || !password}
+      >
+        Save Dexcom Settings
+      </button>
+    </div>
+  );
+}
+
+function PhotoFrameSection({ photoFrameMode, onToggle, hasPhotos }) {
+  if (!hasPhotos) return null;
+
+  return (
+    <div className={styles.section}>
+      <h3 className={styles.sectionTitle}>Photo Frame Mode</h3>
+      <p className={styles.info}>
+        {photoFrameMode
+          ? "Dashboard widgets are hidden. Only photos are shown."
+          : "Hide all widgets and show only the photo slideshow."}
+      </p>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={styles.actionButton}
+      >
+        {photoFrameMode ? "Show Dashboard" : "Enter Photo Frame"}
+      </button>
+    </div>
+  );
+}
+
 function GoogleAccountSection() {
   const { data: auth } = useAuth();
   const googleConnected = auth?.authenticated && auth?.google_connected;
@@ -203,9 +318,11 @@ function GoogleAccountSection() {
   );
 }
 
-export default function SettingsPanel({ onClose }) {
+export default function SettingsPanel({ onClose, photoFrameMode, onTogglePhotoFrame }) {
   const { data: auth } = useAuth();
+  const { data: dashboard } = useDashboard();
   const googleConnected = auth?.authenticated && auth?.google_connected;
+  const hasPhotos = getSavedPhotoCount(dashboard) > 0;
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -221,6 +338,12 @@ export default function SettingsPanel({ onClose }) {
             {"\u2715"}
           </button>
         </div>
+        <PhotoFrameSection
+          photoFrameMode={photoFrameMode}
+          onToggle={onTogglePhotoFrame}
+          hasPhotos={hasPhotos}
+        />
+        <DexcomSettings />
         {googleConnected && <PhotosPicker />}
         <GoogleAccountSection />
       </div>
