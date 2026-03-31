@@ -178,10 +178,45 @@ export default function WeatherWidget() {
         </div>
       )}
 
+      {displayForecast.length > 0 && displayForecast.some((h) => h.precip_prob != null && h.precip_prob > 0) && (
+        <div className={styles.precipChart}>
+          <svg viewBox={`0 0 ${displayForecast.length * 40} 30`} className={styles.precipSvg} preserveAspectRatio="none">
+            {displayForecast.map((h, i) => {
+              const prob = h.precip_prob ?? 0;
+              const barHeight = (prob / 100) * 26;
+              const x = i * 40 + 8;
+              return (
+                <g key={i}>
+                  <rect
+                    x={x}
+                    y={26 - barHeight}
+                    width={24}
+                    height={barHeight}
+                    rx={2}
+                    fill="rgba(96, 165, 250, 0.35)"
+                  />
+                  {prob > 0 && (
+                    <text
+                      x={x + 12}
+                      y={24 - barHeight}
+                      textAnchor="middle"
+                      fill="rgba(96, 165, 250, 0.7)"
+                      fontSize="7"
+                    >
+                      {prob}%
+                    </text>
+                  )}
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      )}
+
       <div className={styles.sunRow}>
-        {weather.sunrise && <span>&#x1F305; {formatTime12(weather.sunrise)}</span>}
-        {weather.sunset && <span>&#x1F307; {formatTime12(weather.sunset)}</span>}
-        {weather.humidity != null && <span>&#x1F4A7; {weather.humidity}%</span>}
+        {weather.sunrise && <span className={styles.sunLabel}>{"\u2191"} {formatTime12(weather.sunrise)}</span>}
+        {weather.sunset && <span className={styles.sunLabel}>{"\u2193"} {formatTime12(weather.sunset)}</span>}
+        {weather.humidity != null && <span>{weather.humidity}% humidity</span>}
       </div>
     </WidgetCard>
   );

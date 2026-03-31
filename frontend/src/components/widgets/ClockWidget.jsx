@@ -7,8 +7,8 @@ const DEFAULT_SETTINGS = {
     label: "Local",
   },
   aux: [
-    { timezone: "America/Los_Angeles", label: "Gig Harbor" },
-    { timezone: "Europe/Guernsey", label: "Guernsey" },
+    { timezone: "America/Los_Angeles", label: "Mark" },
+    { timezone: "Europe/Guernsey", label: "Lizzii" },
   ],
   format: "12h",
 };

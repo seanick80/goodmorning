@@ -30,16 +30,24 @@ export default function StocksWidget() {
         const change = parseFloat(stock.change);
         const isUp = change >= 0;
         return (
-          <div key={stock.symbol} className={styles.row}>
+          <a
+            key={stock.symbol}
+            className={styles.row}
+            href={`https://finance.google.com/finance/quote/${stock.symbol}:NASDAQ`}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
             <span className={styles.symbol}>{stock.symbol}</span>
-            <span className={styles.price}>${stock.current_price}</span>
+            <span className={styles.price}>
+              ${parseFloat(stock.current_price).toFixed(2)}
+            </span>
             <span
               className={`${styles.change} ${isUp ? styles.up : styles.down}`}
             >
               {isUp ? "\u25B2" : "\u25BC"}{" "}
               {Math.abs(parseFloat(stock.change_percent)).toFixed(2)}%
             </span>
-          </div>
+          </a>
         );
       })}
     </WidgetCard>

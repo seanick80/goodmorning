@@ -206,17 +206,30 @@ export default function CalendarWidget() {
         </>
       }
     >
-      {events.map((event, i) => (
-        <div key={i} className={styles.event}>
-          <span className={styles.time}>
-            {event.all_day ? "All day" : `${formatTime(event.start)} – ${formatTime(event.end)}`}
-          </span>
-          <span className={styles.title}>{event.title}</span>
-          {event.location && (
-            <span className={styles.location}>{event.location}</span>
-          )}
-        </div>
-      ))}
+      {events.map((event, i) => {
+        // Strip recurring instance suffix (e.g. _20260331T034500Z) to get base event ID
+        const baseUid = event.uid?.replace(/_\d{8}T\d{6}Z?$/, "") ?? "";
+        const calUrl = baseUid
+          ? `https://calendar.google.com/calendar/r/eventedit/${baseUid}`
+          : null;
+        return (
+          <a
+            key={i}
+            className={styles.event}
+            href={calUrl ?? undefined}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <span className={styles.time}>
+              {event.all_day ? "All day" : `${formatTime(event.start)} – ${formatTime(event.end)}`}
+            </span>
+            <span className={styles.title}>{event.title}</span>
+            {event.location && (
+              <span className={styles.location}>{event.location}</span>
+            )}
+          </a>
+        );
+      })}
     </WidgetCard>
   );
 }
