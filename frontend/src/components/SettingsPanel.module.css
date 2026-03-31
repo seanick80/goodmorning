@@ -170,3 +170,41 @@
 .textInput::placeholder {
   color: rgba(255, 255, 255, 0.3);
 }
+
+.auxRow {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.auxRow .textInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.auxRow .textInput:first-child {
+  flex: 0.6;
+}
+
+.removeButton {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.3);
+  font-size: 0.8rem;
+  cursor: pointer;
+  padding: 0.3rem;
+  line-height: 1;
+  transition: color 0.2s;
+  flex-shrink: 0;
+}
+
+.removeButton:hover {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.auxActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}

@@ -25,7 +25,8 @@ function getDashboardFlashDuration(dashboard) {
 
 export default function Dashboard() {
   const { data: dashboard } = useDashboard();
-  const clockSettings = dashboard?.clock_settings ?? undefined;
+  const clockWidget = dashboard?.widget_layout?.find((w) => w.widget === "clock");
+  const clockSettings = clockWidget?.settings ?? undefined;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [photoFrameMode, setPhotoFrameMode] = useState(false);
   const [dashboardFlash, setDashboardFlash] = useState(false);

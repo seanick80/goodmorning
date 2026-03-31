@@ -6,10 +6,7 @@ const DEFAULT_SETTINGS = {
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     label: "Local",
   },
-  aux: [
-    { timezone: "America/Los_Angeles", label: "Mark" },
-    { timezone: "Europe/Guernsey", label: "Lizzii" },
-  ],
+  aux: [],
   format: "12h",
 };
 

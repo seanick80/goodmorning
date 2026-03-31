@@ -9,6 +9,11 @@
 #   ./deploy-pi.sh --setup            First deploy: push everything + install configs
 #   ./deploy-pi.sh --status           Show Pi health check
 #
+# IMPORTANT: Deploys NEVER modify database contents. Migrations (schema changes)
+# run automatically, but user data (widget config, cached API data) is preserved.
+# To seed a fresh DB with defaults, run manually on the Pi:
+#   sudo -u goodmorning bash -c 'cd /opt/goodmorning/backend && source .venv/bin/activate && python manage.py seed_data'
+#
 # Supports two sync methods:
 #   - rsync (preferred) — fast incremental sync with --delete for clean deploys
 #   - scp+tar (fallback) — used when rsync is unavailable (e.g. Git Bash on Windows)

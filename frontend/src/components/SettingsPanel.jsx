@@ -368,6 +368,146 @@ function PhotoFrameSection({ photoFrameMode, onToggle, hasPhotos }) {
   );
 }
 
+function getClockSettings(dashboard) {
+  if (!dashboard?.widget_layout) return { format: "12h", aux: [] };
+  const widget = dashboard.widget_layout.find((w) => w.widget === "clock");
+  return {
+    format: widget?.settings?.format ?? "12h",
+    aux: widget?.settings?.aux ?? [],
+  };
+}
+
+function ClockSettings() {
+  const queryClient = useQueryClient();
+  const { data: dashboard } = useDashboard();
+  const saved = getClockSettings(dashboard);
+  const [auxClocks, setAuxClocks] = useState(saved.aux);
+  const [format, setFormat] = useState(saved.format);
+  const [saveStatus, setSaveStatus] = useState(null);
+
+  function saveClockSettings(newAux, newFormat) {
+    const widgetLayout = dashboard?.widget_layout ?? [];
+    const clockWidget = widgetLayout.find((w) => w.widget === "clock");
+    const updatedSettings = {
+      ...(clockWidget?.settings ?? {}),
+      aux: newAux,
+      format: newFormat,
+    };
+    const updatedLayout = widgetLayout.map((w) =>
+      w.widget === "clock" ? { ...w, settings: updatedSettings } : w
+    );
+    if (!clockWidget) {
+      updatedLayout.push({
+        widget: "clock",
+        enabled: true,
+        position: 0,
+        settings: updatedSettings,
+      });
+    }
+    patchDashboard({ widget_layout: updatedLayout }).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus(null), 2000);
+    });
+  }
+
+  function handleAddAux() {
+    if (auxClocks.length >= 3) return;
+    const updated = [...auxClocks, { label: "", timezone: "America/New_York" }];
+    setAuxClocks(updated);
+  }
+
+  function handleRemoveAux(index) {
+    const updated = auxClocks.filter((_, i) => i !== index);
+    setAuxClocks(updated);
+    saveClockSettings(updated, format);
+  }
+
+  function handleAuxChange(index, field, value) {
+    const updated = auxClocks.map((c, i) =>
+      i === index ? { ...c, [field]: value } : c
+    );
+    setAuxClocks(updated);
+  }
+
+  function handleSave() {
+    saveClockSettings(auxClocks, format);
+  }
+
+  function handleFormatChange(e) {
+    const newFormat = e.target.value;
+    setFormat(newFormat);
+    saveClockSettings(auxClocks, newFormat);
+  }
+
+  return (
+    <div className={styles.section}>
+      <h3 className={styles.sectionTitle}>Clock</h3>
+      <label className={styles.sliderLabel}>
+        <span>Time format</span>
+        <select
+          value={format}
+          onChange={handleFormatChange}
+          className={styles.textInput}
+        >
+          <option value="12h">12-hour</option>
+          <option value="24h">24-hour</option>
+        </select>
+      </label>
+      <div className={styles.sliderLabel}>
+        <span>Auxiliary time zones ({auxClocks.length}/3)</span>
+      </div>
+      {auxClocks.map((clock, i) => (
+        <div key={i} className={styles.auxRow}>
+          <input
+            type="text"
+            value={clock.label}
+            onChange={(e) => handleAuxChange(i, "label", e.target.value)}
+            className={styles.textInput}
+            placeholder="Name"
+          />
+          <input
+            type="text"
+            value={clock.timezone}
+            onChange={(e) => handleAuxChange(i, "timezone", e.target.value)}
+            className={styles.textInput}
+            placeholder="e.g. America/Los_Angeles"
+          />
+          <button
+            type="button"
+            onClick={() => handleRemoveAux(i)}
+            className={styles.removeButton}
+            title="Remove"
+          >
+            {"\u2715"}
+          </button>
+        </div>
+      ))}
+      <div className={styles.auxActions}>
+        {auxClocks.length < 3 && (
+          <button
+            type="button"
+            onClick={handleAddAux}
+            className={styles.actionButton}
+          >
+            Add Time Zone
+          </button>
+        )}
+        {auxClocks.length > 0 && (
+          <button
+            type="button"
+            onClick={handleSave}
+            className={styles.actionButton}
+          >
+            Save
+          </button>
+        )}
+      </div>
+      {saveStatus === "saved" && <p className={styles.success}>Saved!</p>}
+    </div>
+  );
+}
+
 function GoogleAccountSection() {
   const { data: auth } = useAuth();
   const googleConnected = auth?.authenticated && auth?.google_connected;
@@ -411,6 +551,7 @@ export default function SettingsPanel({ onClose, photoFrameMode, onTogglePhotoFr
             {"\u2715"}
           </button>
         </div>
+        <ClockSettings />
         <PhotoFrameSection
           photoFrameMode={photoFrameMode}
           onToggle={onTogglePhotoFrame}
