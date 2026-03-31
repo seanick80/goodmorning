@@ -45,12 +45,12 @@ export default function BackgroundSlideshow({ onAdvance } = {}) {
       preloadRef.current = img;
       img.onload = () => {
         setPhase("fading");
+        if (onAdvanceRef.current) onAdvanceRef.current(nextIdx);
         setTimeout(() => {
           setCurrent(nextIdx);
           currentRef.current = nextIdx;
           setNext(null);
           setPhase("showing");
-          if (onAdvanceRef.current) onAdvanceRef.current(nextIdx);
         }, FADE_DURATION);
       };
       img.onerror = () => {

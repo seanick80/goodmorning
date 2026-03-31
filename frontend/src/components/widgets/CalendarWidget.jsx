@@ -216,9 +216,9 @@ export default function CalendarWidget() {
         const tomorrowEvents = events.filter((e) => new Date(e.start) >= tomorrow);
 
         function renderEvent(event, i, isTomorrow) {
-          const baseUid = event.uid?.replace(/_\d{8}T\d{6}Z?$/, "") ?? "";
-          const calUrl = baseUid
-            ? `https://calendar.google.com/calendar/r/eventedit/${baseUid}`
+          const eventDate = event.start ? new Date(event.start) : null;
+          const calUrl = eventDate
+            ? `https://calendar.google.com/calendar/r/day/${eventDate.getFullYear()}/${eventDate.getMonth() + 1}/${eventDate.getDate()}`
             : null;
           return (
             <a

@@ -300,6 +300,57 @@ After deploying, the Google OAuth flow requires additional setup:
 - [ ] At least one user has connected their Google account via `/accounts/google/login/`
 - [ ] Background scheduler is running (photos and calendar refresh automatically)
 
+### Token refresh
+
+Google OAuth tokens expire after 1 hour. The `get_google_credentials()` helper in `services/google_api.py` handles automatic refresh. Key implementation details:
+- The `expiry` field from allauth's `SocialToken` must be passed to `google.oauth2.credentials.Credentials` — without it, `credentials.expired` is always `False` and tokens silently fail after 1 hour.
+- allauth stores `expires_at` as timezone-aware, but google-auth compares against naive `utcnow()`. The code strips tzinfo before passing to Credentials.
+- After a successful refresh, both `token` and `expires_at` are saved back to the `SocialToken`.
+
+---
+
+## Dexcom Glucose Widget
+
+The glucose widget displays CGM (Continuous Glucose Monitor) data from the Dexcom Share API.
+
+### Setup
+
+1. Enable the glucose widget in the Settings panel
+2. Enter Dexcom credentials (username, password, region)
+3. Credentials are stored in the dashboard's `widget_layout` settings
+4. The scheduler fetches readings every 5 minutes
+
+### How it works
+
+- **Backend:** `services/glucose.py` uses the `pydexcom` library (v0.5.1) to fetch readings via the Dexcom Share API (reverse-engineered, not an official API)
+- **Job:** `fetch_glucose` iterates dashboards with glucose widgets, reads credentials from widget settings, fetches 3 hours of readings, upserts to `GlucoseReading` model, purges readings older than 24 hours
+- **API:** `/api/glucose/` returns the latest reading plus 3-hour history
+- **Frontend:** Color-coded value (green 70-180, yellow 55-70/180-250, red outside), trend arrow, stale indicator (>15 min), SVG sparkline with in-range band
+
+### Deploy checklist for Dexcom
+
+- [ ] `pydexcom==0.5.1` in requirements.txt (installed via pip)
+- [ ] User has configured Dexcom credentials in Settings panel
+- [ ] Scheduler is running (`fetch_glucose` job registered at 5-minute intervals)
+- [ ] User has Dexcom Share enabled in the Dexcom mobile app
+
+---
+
+## Calendar Widget
+
+### Data sources
+
+The calendar supports two data sources — use one or the other, not both:
+
+1. **Google Calendar OAuth** (recommended) — connects via allauth, fetches from Google Calendar API. Supports multiple calendars, configurable in the Settings panel.
+2. **ICS feed** (`USER_CALENDAR` env var) — fetches from any ICS URL. Useful if Google OAuth isn't set up.
+
+**Important:** If both are configured, events will be duplicated. Comment out `USER_CALENDAR` in `.env` when using Google Calendar OAuth.
+
+### Tomorrow's events
+
+The calendar shows tomorrow's events when ≤2 of today's events remain (based on current time vs event end time). Tomorrow's events appear under a "Tomorrow" header with dimmed styling.
+
 ---
 
 ## Security Considerations

@@ -29,7 +29,7 @@ def fetch_glucose_readings(
         List of reading dicts, or None on failure.
     """
     try:
-        dexcom = Dexcom(username=username, password=password)
+        dexcom = Dexcom(username=username, password=password, region=region)
         readings = dexcom.get_glucose_readings(minutes=minutes, max_count=max_count)
     except Exception:
         logger.exception("Failed to fetch Dexcom glucose readings")

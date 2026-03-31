@@ -22,14 +22,17 @@ A full-stack web dashboard designed for a tablet display in a living room. Shows
 | Calendar | Google Calendar API (OAuth) | Every 30 minutes |
 | News | RSS feeds (BBC, NPR, Reuters) | Every 60 minutes |
 | Photos | Google Photos Picker API | Configurable (15-300s) |
+| Glucose | Dexcom Share API (CGM) | Every 5 minutes |
 
 ## Layout
 
 Uses a **Hero layout** (60/40 split):
 - **Left panel:** Clock (multi-timezone: primary + 2 aux) and Weather
-- **Right panel:** Stocks, Calendar, and News stacked vertically
+- **Right panel:** Glucose, Stocks, Calendar, and News stacked vertically
 
 Background photo slideshow from Google Photos with configurable crossfade interval.
+
+**Photo Frame Mode:** Fullscreen photo slideshow with optional dashboard flash — the dashboard appears as a "slide" every N photos for a configurable duration, then fades back to photos.
 
 ## Quick Start
 
@@ -92,7 +95,7 @@ After startup:
 
 ### Run Tests
 ```bash
-# Backend (120 tests) — requires PostgreSQL running
+# Backend (134 tests) — requires PostgreSQL running
 cd backend
 source .venv/Scripts/activate
 python -m pytest -v
@@ -133,6 +136,7 @@ Copy `backend/.env.example` to `backend/.env` and configure:
 | `/api/photos/picker/session/` | POST | Create Photos Picker session |
 | `/api/photos/picker/session/<id>/poll/` | GET | Poll picker session status |
 | `/api/photos/picker/session/<id>/media/` | GET | Fetch picker media items |
+| `/api/glucose/` | GET | Current glucose reading + 3hr history |
 
 ## Project Structure
 
@@ -141,7 +145,7 @@ goodmorning/
   backend/
     config/           # Django project settings
     dashboard/        # Main Django app
-      models.py       # UserDashboard, WeatherCache, StockQuote, CalendarEvent, NewsHeadline
+      models.py       # UserDashboard, WeatherCache, StockQuote, CalendarEvent, NewsHeadline, GlucoseReading
       views.py        # DRF API views
       serializers.py  # DRF serializers
       services/       # External API integrations (weather, stocks, calendar, news, geocode)
@@ -153,7 +157,7 @@ goodmorning/
       api/            # Fetch wrappers for each endpoint
       hooks/          # TanStack Query hooks
       components/
-        widgets/      # ClockWidget, WeatherWidget, StocksWidget, CalendarWidget, NewsWidget
+        widgets/      # ClockWidget, WeatherWidget, StocksWidget, CalendarWidget, NewsWidget, GlucoseWidget
         mocks/        # UI layout and widget design mockups
         Dashboard.jsx # Main Hero layout
         BackgroundSlideshow.jsx  # Google Photos slideshow
@@ -171,8 +175,7 @@ goodmorning/
 
 ## Future Work
 
-- Dexcom glucose widget (for monitoring CGM data)
-- Photo Frame Mode (fullscreen photo-only, no widgets)
+- Configurable news feeds and keyword filtering
 - Privacy Policy page (needed for Google verification)
 - PWA support (tablet home screen install)
 - Theme customization (dark/light modes)
