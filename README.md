@@ -27,7 +27,7 @@ A full-stack web dashboard designed for a tablet display in a living room. Shows
 ## Layout
 
 Uses a **Hero layout** (60/40 split):
-- **Left panel:** Clock (multi-timezone: primary + 2 aux) and Weather
+- **Left panel:** Clock (multi-timezone: primary + 0-3 configurable aux) and Weather
 - **Right panel:** Glucose, Stocks, Calendar, and News stacked vertically
 
 Background photo slideshow from Google Photos with configurable crossfade interval.
@@ -161,7 +161,7 @@ goodmorning/
         mocks/        # UI layout and widget design mockups
         Dashboard.jsx # Main Hero layout
         BackgroundSlideshow.jsx  # Google Photos slideshow
-        SettingsPanel.jsx        # Settings panel (photos, Google account)
+        SettingsPanel.jsx        # Settings panel (clock, photos, glucose, Google account)
   docker-compose.yml  # PostgreSQL 16
   deploy.sh           # One-command bootstrap & startup
 ```

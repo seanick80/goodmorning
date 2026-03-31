@@ -48,6 +48,10 @@ The Good Morning Dashboard is a personal morning information display designed to
 | Google OAuth token refresh fix | DONE |
 | Calendar tomorrow events (smart threshold) | DONE |
 | UI polish (stock links, calendar links, precip chart, names) | DONE |
+| Configurable aux time zones (0-3, dropdown picker) | DONE |
+| ICS calendar removal (Google Calendar only) | DONE |
+| Deploy verification (pre-swap + post-deploy checks) | DONE |
+| Deploy scp+tar extraction bug fix | DONE |
 | Configurable news feeds + keywords | Backlog |
 | Privacy policy page | Not started |
 

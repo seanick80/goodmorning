@@ -259,6 +259,8 @@ Dev machine                              Raspberry Pi
 - **Two sync methods** — rsync (with `--delete`) is preferred but unavailable in Git Bash. The scp+tar fallback does clean installs: frontend `dist/` is wiped before extracting, backend uses an atomic swap to preserve the venv
 - **Frontend built on dev machine** — Pi doesn't need Node.js installed (saves ~200 MB + build time)
 - **No downtime** — gunicorn restarts gracefully (workers finish current requests)
+- **Pre-swap validation** — scp+tar path verifies critical files (`manage.py`, `config/settings.py`, `dashboard/views.py`) exist after tar extraction, aborting before swap if extraction went wrong
+- **Post-deploy verification** — checks critical backend files, frontend dist, and API health (HTTP 200) after restart — fails loudly with details if anything is missing
 - **Health check** — script waits for the API to respond before reporting success
 - **No git on Pi** — the Pi receives built artifacts, not a repo clone. This avoids needing git, avoids `.git` bloat, and prevents accidental edits on the Pi diverging from the repo.
 
@@ -357,14 +359,9 @@ The glucose widget displays CGM (Continuous Glucose Monitor) data from the Dexco
 
 ## Calendar Widget
 
-### Data sources
+The calendar uses **Google Calendar OAuth** exclusively — connects via allauth, fetches from the Google Calendar API. Supports multiple calendars, configurable in the Settings panel.
 
-The calendar supports two data sources — use one or the other, not both:
-
-1. **Google Calendar OAuth** (recommended) — connects via allauth, fetches from Google Calendar API. Supports multiple calendars, configurable in the Settings panel.
-2. **ICS feed** (`USER_CALENDAR` env var) — fetches from any ICS URL. Useful if Google OAuth isn't set up.
-
-**Important:** If both are configured, events will be duplicated. Comment out `USER_CALENDAR` in `.env` when using Google Calendar OAuth.
+ICS feed support was removed to eliminate duplicate event issues.
 
 ### Tomorrow's events
 
