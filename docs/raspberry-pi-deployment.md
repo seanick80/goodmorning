@@ -221,13 +221,16 @@ A single `pi-setup.sh` script runs on the Pi (pushed via SSH or curl) that:
 
 ### What `deploy-pi.sh` does
 
+The script auto-detects whether rsync is available and falls back to scp+tar if not.
+
+**With rsync (preferred):**
 ```
 Dev machine                              Raspberry Pi
 ──────────                               ────────────
 1. npm run build (frontend/dist/)
-2. rsync backend/ → Pi:/opt/goodmorning/backend/
-   rsync frontend/dist/ → Pi:/opt/goodmorning/frontend/dist/
-   rsync pi/ → Pi:/opt/goodmorning/pi/
+2. rsync --delete backend/ → Pi         (removes stale files automatically)
+   rsync --delete frontend/dist/ → Pi
+   rsync --delete pi/ → Pi
 3. SSH: pi-update.sh ─────────────────→  4. pip install -r requirements.txt
                                           5. python manage.py migrate
                                           6. python manage.py collectstatic
@@ -235,9 +238,25 @@ Dev machine                              Raspberry Pi
                                           8. Health check: curl localhost/api/weather/
 ```
 
+**With scp+tar (fallback for Git Bash on Windows):**
+```
+Dev machine                              Raspberry Pi
+──────────                               ────────────
+1. npm run build (frontend/dist/)
+2. tar backend (excl .venv/.env/logs)
+   tar frontend/dist
+   scp both to Pi ──────────────────→  3. Backend: extract to temp dir,
+                                           copy .venv/.env/logs from old,
+                                           atomic swap (mv old → old_bak,
+                                           mv new → current, rm old_bak)
+                                        4. Frontend: rm -rf dist/, extract fresh
+                                           (clean install, no stale assets)
+5. SSH: pi-update.sh ───────────────→  6-9. pip install, migrate, restart, healthcheck
+```
+
 ### Key design decisions
 
-- **rsync over SSH** — fast incremental sync, only changed files transfer. **Note:** rsync is not available in Git Bash on Windows. Install it via MSYS2/pacman (`pacman -S rsync`), use WSL, or use the `scp`+`tar` fallback (see Troubleshooting section for the venv-preserving procedure)
+- **Two sync methods** — rsync (with `--delete`) is preferred but unavailable in Git Bash. The scp+tar fallback does clean installs: frontend `dist/` is wiped before extracting, backend uses an atomic swap to preserve the venv
 - **Frontend built on dev machine** — Pi doesn't need Node.js installed (saves ~200 MB + build time)
 - **No downtime** — gunicorn restarts gracefully (workers finish current requests)
 - **Health check** — script waits for the API to respond before reporting success
@@ -492,37 +511,11 @@ The project `.gitattributes` enforces LF endings for `.sh` files, but this only 
 
 ### `rsync: command not found` in Git Bash on Windows
 
-Git Bash on Windows does not include rsync. Options:
-1. Install rsync via MSYS2: `pacman -S rsync`
-2. Use WSL for the deploy script
-3. Use `scp` + `tar` with the venv-preserving swap procedure (see below)
+`deploy-pi.sh` automatically falls back to scp+tar when rsync is unavailable. No manual steps needed. If you want rsync for faster incremental deploys, install via MSYS2: `pacman -S rsync`.
 
-**Important — venv preservation:** When using `scp`+`tar` to deploy backend updates, do NOT `rm -rf /opt/goodmorning/backend` before extracting. The venv contains platform-specific compiled packages (aarch64). Recreating it on every deploy is slow and may fail if PyPI is flaky. Instead, extract to a temp directory, copy the existing venv over, then swap:
-```bash
-# Build tarball (from c:\sourcecode\goodmorning):
-tar czf /tmp/backend.tar.gz --exclude=__pycache__ --exclude='*.pyc' \
-    --exclude=.venv --exclude=logs --exclude=db.sqlite3 --exclude=staticfiles backend/
-scp /tmp/backend.tar.gz pi@goodmorning.local:/tmp/
-
-# Extract to temp dir, preserve venv, swap atomically
-ssh pi@goodmorning.local "\
-    sudo rm -rf /opt/goodmorning/backend_new \
-    && sudo mkdir /opt/goodmorning/backend_new \
-    && cd /opt/goodmorning \
-    && sudo tar xzf /tmp/backend.tar.gz -C backend_new --strip-components=1 \
-    && sudo cp -a /opt/goodmorning/backend/.venv /opt/goodmorning/backend_new/.venv \
-    && sudo rm -rf /opt/goodmorning/backend \
-    && sudo mv /opt/goodmorning/backend_new /opt/goodmorning/backend \
-    && sudo chown -R goodmorning:goodmorning /opt/goodmorning/"
-
-# Install any new/updated deps
-ssh pi@goodmorning.local "sudo -u goodmorning bash -c '\
-    cd /opt/goodmorning/backend && source .venv/bin/activate \
-    && pip install -r requirements.txt'"
-
-# Restart services
-ssh pi@goodmorning.local "sudo systemctl restart goodmorning-web goodmorning-scheduler"
-```
+**How the scp+tar fallback works:**
+- **Frontend:** `rm -rf dist/` then extract fresh — ensures no stale hashed assets from previous builds
+- **Backend:** Atomic swap — extract to temp dir, copy `.venv`/`.env`/`logs` from the old install, then `mv` swap. The venv is preserved because it contains platform-specific compiled packages (aarch64) that are slow to reinstall
 
 ### `apt-get upgrade` times out over SSH
 

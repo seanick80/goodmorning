@@ -9,17 +9,15 @@
 #   ./deploy-pi.sh --setup            First deploy: push everything + install configs
 #   ./deploy-pi.sh --status           Show Pi health check
 #
-# Prerequisites:
-#   - SSH key auth to goodmorning.local
-#   - rsync (not included in Git Bash on Windows — install via MSYS2 `pacman -S rsync`,
-#     or run this script from WSL). For deploy without rsync, use the venv-preserving
-#     scp+tar procedure documented in docs/raspberry-pi-deployment.md (Troubleshooting).
-#     Do NOT rm -rf the backend dir — it destroys the venv with platform-specific packages.
+# Supports two sync methods:
+#   - rsync (preferred) — fast incremental sync with --delete for clean deploys
+#   - scp+tar (fallback) — used when rsync is unavailable (e.g. Git Bash on Windows)
+#     Uses atomic swap for backend to preserve .venv, .env, and logs
 
 set -euo pipefail
 
 PI_HOST="goodmorning.local"
-PI_USER="goodmorning"
+PI_USER="pi"
 PI_DIR="/opt/goodmorning"
 ROOT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BACKEND_DIR="$ROOT_DIR/backend"
@@ -65,10 +63,14 @@ fi
 ok "SSH connected."
 
 # -------------------------------------------------------------------
-# Check rsync availability
+# Check sync method
 # -------------------------------------------------------------------
-if ! command -v rsync &>/dev/null; then
-    fail "rsync not found. On Windows Git Bash, install via MSYS2 (pacman -S rsync) or run from WSL."
+USE_RSYNC=false
+if command -v rsync &>/dev/null; then
+    USE_RSYNC=true
+    info "Using rsync for file sync."
+else
+    info "rsync not found — using scp+tar fallback."
 fi
 
 # -------------------------------------------------------------------
@@ -81,33 +83,121 @@ cd "$ROOT_DIR"
 ok "Frontend built."
 
 # -------------------------------------------------------------------
-# Rsync files to Pi
+# Sync functions
 # -------------------------------------------------------------------
-RSYNC_OPTS="-az --delete --exclude=__pycache__ --exclude=*.pyc --exclude=.venv --exclude=logs --exclude=.env"
+sync_with_rsync() {
+    local RSYNC_OPTS="-az --delete --exclude=__pycache__ --exclude=*.pyc --exclude=.venv --exclude=logs --exclude=.env --exclude=staticfiles"
 
-if [[ "$MODE" == "--frontend-only" ]]; then
-    info "Syncing frontend only..."
+    if [[ "$MODE" == "--frontend-only" ]]; then
+        info "Syncing frontend only..."
+        rsync $RSYNC_OPTS "$FRONTEND_DIR/dist/" "$PI_USER@$PI_HOST:$PI_DIR/frontend/dist/"
+        ok "Frontend synced."
+        return
+    fi
+
+    info "Syncing backend..."
+    rsync $RSYNC_OPTS "$BACKEND_DIR/" "$PI_USER@$PI_HOST:$PI_DIR/backend/"
+
+    info "Syncing frontend..."
     rsync $RSYNC_OPTS "$FRONTEND_DIR/dist/" "$PI_USER@$PI_HOST:$PI_DIR/frontend/dist/"
-    ok "Frontend synced."
 
-    info "Restarting nginx..."
+    info "Syncing Pi configs..."
+    rsync $RSYNC_OPTS "$PI_CONF_DIR/" "$PI_USER@$PI_HOST:$PI_DIR/pi/"
+
+    ok "Files synced."
+}
+
+sync_with_scp() {
+    local TMPDIR="/tmp/goodmorning-deploy"
+
+    if [[ "$MODE" == "--frontend-only" ]]; then
+        info "Deploying frontend only..."
+        tar czf /tmp/gm-frontend.tar.gz -C "$FRONTEND_DIR" dist/
+        scp /tmp/gm-frontend.tar.gz "$PI_USER@$PI_HOST:/tmp/"
+        ssh "$PI_USER@$PI_HOST" "\
+            sudo rm -rf $PI_DIR/frontend/dist && \
+            sudo mkdir -p $PI_DIR/frontend/dist && \
+            sudo tar xzf /tmp/gm-frontend.tar.gz -C $PI_DIR/frontend/ && \
+            sudo chown -R goodmorning:goodmorning $PI_DIR/frontend && \
+            rm /tmp/gm-frontend.tar.gz"
+        ok "Frontend synced."
+        return
+    fi
+
+    # --- Backend: atomic swap preserving .venv, .env, logs ---
+    info "Packaging backend..."
+    tar czf /tmp/gm-backend.tar.gz \
+        --exclude=__pycache__ --exclude='*.pyc' \
+        --exclude=.venv --exclude=logs \
+        --exclude=db.sqlite3 --exclude=staticfiles \
+        --exclude=.env \
+        -C "$ROOT_DIR" backend/
+
+    info "Packaging frontend..."
+    tar czf /tmp/gm-frontend.tar.gz -C "$FRONTEND_DIR" dist/
+
+    info "Uploading to Pi..."
+    scp /tmp/gm-backend.tar.gz /tmp/gm-frontend.tar.gz "$PI_USER@$PI_HOST:/tmp/"
+
+    info "Deploying backend (atomic swap)..."
+    ssh "$PI_USER@$PI_HOST" "\
+        sudo rm -rf $TMPDIR && \
+        sudo mkdir -p $TMPDIR/backend && \
+        sudo tar xzf /tmp/gm-backend.tar.gz -C $TMPDIR --strip-components=1 && \
+        sudo cp -a $PI_DIR/backend/.venv $TMPDIR/backend/.venv && \
+        sudo cp -a $PI_DIR/backend/.env  $TMPDIR/backend/.env && \
+        sudo cp -a $PI_DIR/backend/logs  $TMPDIR/backend/logs 2>/dev/null; \
+        sudo rm -rf $PI_DIR/backend_old && \
+        sudo mv $PI_DIR/backend $PI_DIR/backend_old && \
+        sudo mv $TMPDIR/backend $PI_DIR/backend && \
+        sudo chown -R goodmorning:goodmorning $PI_DIR/backend && \
+        sudo rm -rf $PI_DIR/backend_old $TMPDIR"
+    ok "Backend deployed."
+
+    info "Deploying frontend (clean install)..."
+    ssh "$PI_USER@$PI_HOST" "\
+        sudo rm -rf $PI_DIR/frontend/dist && \
+        sudo mkdir -p $PI_DIR/frontend/dist && \
+        sudo tar xzf /tmp/gm-frontend.tar.gz -C $PI_DIR/frontend/ && \
+        sudo chown -R goodmorning:goodmorning $PI_DIR/frontend"
+    ok "Frontend deployed."
+
+    # --- Pi configs ---
+    if [[ -d "$PI_CONF_DIR" ]]; then
+        info "Syncing Pi configs..."
+        tar czf /tmp/gm-pi.tar.gz -C "$ROOT_DIR" pi/
+        scp /tmp/gm-pi.tar.gz "$PI_USER@$PI_HOST:/tmp/"
+        ssh "$PI_USER@$PI_HOST" "\
+            sudo rm -rf $PI_DIR/pi && \
+            sudo mkdir -p $PI_DIR/pi && \
+            sudo tar xzf /tmp/gm-pi.tar.gz -C $PI_DIR --strip-components=0 && \
+            sudo chown -R goodmorning:goodmorning $PI_DIR/pi && \
+            rm /tmp/gm-pi.tar.gz"
+        ok "Pi configs synced."
+    fi
+
+    # Clean up temp files
+    ssh "$PI_USER@$PI_HOST" "rm -f /tmp/gm-backend.tar.gz /tmp/gm-frontend.tar.gz"
+    rm -f /tmp/gm-backend.tar.gz /tmp/gm-frontend.tar.gz /tmp/gm-pi.tar.gz
+    ok "Files synced."
+}
+
+# -------------------------------------------------------------------
+# Run sync
+# -------------------------------------------------------------------
+if $USE_RSYNC; then
+    sync_with_rsync
+else
+    sync_with_scp
+fi
+
+# Frontend-only exits early from sync functions
+if [[ "$MODE" == "--frontend-only" ]]; then
+    info "Reloading nginx..."
     ssh "$PI_USER@$PI_HOST" "sudo systemctl reload nginx"
     ok "Done."
     exit 0
 fi
-
-info "Syncing backend..."
-rsync $RSYNC_OPTS \
-    --exclude=staticfiles \
-    "$BACKEND_DIR/" "$PI_USER@$PI_HOST:$PI_DIR/backend/"
-
-info "Syncing frontend..."
-rsync $RSYNC_OPTS "$FRONTEND_DIR/dist/" "$PI_USER@$PI_HOST:$PI_DIR/frontend/dist/"
-
-info "Syncing Pi configs..."
-rsync $RSYNC_OPTS "$PI_CONF_DIR/" "$PI_USER@$PI_HOST:$PI_DIR/pi/"
-
-ok "Files synced."
 
 # -------------------------------------------------------------------
 # Run update on Pi

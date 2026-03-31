@@ -14,16 +14,16 @@ function getPhotosConfig(dashboard) {
   return { count: media.length, interval };
 }
 
-export default function BackgroundSlideshow({ onAdvance } = {}) {
+export default function BackgroundSlideshow({ onAdvance, paused } = {}) {
   const { data: dashboard } = useDashboard();
   const { count, interval } = getPhotosConfig(dashboard);
   const [current, setCurrent] = useState(0);
   const [next, setNext] = useState(null);
-  const [phase, setPhase] = useState("showing"); // "showing" | "preloading" | "fading"
+  const [fading, setFading] = useState(false);
   const timerRef = useRef(null);
-  const preloadRef = useRef(null);
   const onAdvanceRef = useRef(onAdvance);
-  const currentRef = useRef(current);
+  const currentRef = useRef(0);
+  const pausedRef = useRef(paused);
 
   useEffect(() => {
     onAdvanceRef.current = onAdvance;
@@ -34,30 +34,34 @@ export default function BackgroundSlideshow({ onAdvance } = {}) {
   }, [current]);
 
   useEffect(() => {
+    pausedRef.current = paused;
+  }, [paused]);
+
+  useEffect(() => {
     if (count <= 1) return;
 
     function advance() {
+      if (pausedRef.current) return;
       const nextIdx = (currentRef.current + 1) % count;
       setNext(nextIdx);
-      setPhase("preloading");
+      setFading(false);
 
       const img = new Image();
-      preloadRef.current = img;
       img.onload = () => {
-        setPhase("fading");
-        if (onAdvanceRef.current) onAdvanceRef.current(nextIdx);
+        setFading(true);
         setTimeout(() => {
           setCurrent(nextIdx);
           currentRef.current = nextIdx;
           setNext(null);
-          setPhase("showing");
+          setFading(false);
+          if (onAdvanceRef.current) onAdvanceRef.current(nextIdx);
         }, FADE_DURATION);
       };
       img.onerror = () => {
         setCurrent(nextIdx);
         currentRef.current = nextIdx;
         setNext(null);
-        setPhase("showing");
+        setFading(false);
       };
       img.src = `/api/photos/${nextIdx}/?w=1920&h=1080`;
     }
@@ -73,13 +77,13 @@ export default function BackgroundSlideshow({ onAdvance } = {}) {
       <img
         src={`/api/photos/${current}/?w=1920&h=1080`}
         alt=""
-        className={`${styles.image} ${phase === "fading" ? styles.fadeOut : styles.visible}`}
+        className={`${styles.image} ${styles.current}`}
       />
       {next !== null && (
         <img
           src={`/api/photos/${next}/?w=1920&h=1080`}
           alt=""
-          className={`${styles.image} ${styles.nextImage} ${phase === "fading" ? styles.visible : ""}`}
+          className={`${styles.image} ${styles.next} ${fading ? styles.fadeIn : ""}`}
         />
       )}
       <div className={styles.overlay} />

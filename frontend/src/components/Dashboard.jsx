@@ -47,6 +47,8 @@ export default function Dashboard() {
     }
   }, [photoFrameMode, flashFreq, flashDuration]);
 
+  const slideshowPaused = photoFrameMode && dashboardFlash;
+
   const handleTogglePhotoFrame = useCallback(() => {
     setPhotoFrameMode((v) => !v);
     tickRef.current = 0;
@@ -61,7 +63,7 @@ export default function Dashboard() {
 
   return (
     <div className={styles.wrapper}>
-      <BackgroundSlideshow onAdvance={onAdvance} />
+      <BackgroundSlideshow onAdvance={onAdvance} paused={slideshowPaused} />
       {photoFrameMode && (
         <button
           type="button"
