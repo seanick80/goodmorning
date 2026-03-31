@@ -54,8 +54,61 @@ The Good Morning Dashboard is a personal morning information display designed to
 | Deploy scp+tar extraction bug fix | DONE |
 | Dead code cleanup (ICS removal, unused deps) | DONE |
 | Input validation (widget_layout schema, coordinate bounds) | DONE |
+| Widget layout editor (drag-drop, enable/disable, configure) | In Progress |
 | Configurable news feeds + keywords | Backlog |
 | Privacy policy page | Not started |
+
+---
+
+## Widget Layout Editor — Implementation Plan
+
+### Goal
+Replace hardcoded widget placement with a dynamic, user-configurable layout.
+Users can drag-drop reorder widgets, move them between panels, enable/disable,
+configure settings inline, and adjust panel split ratio.
+
+### Schema Change
+Add `panel` field to each widget in `widget_layout`:
+```json
+{"widget": "clock", "enabled": true, "position": 0, "panel": "left", "settings": {...}}
+```
+Allowed panels: `"left"`, `"right"`. Default assignment:
+- Left: clock (0), weather (1)
+- Right: glucose (0), stocks (1), calendar (2), news (3)
+
+### Phase 1: Dynamic rendering (backend + frontend)
+- Add `panel` to `ALLOWED_WIDGETS` validation in serializers.py
+- Update seed_data.py with `panel` field
+- Refactor Dashboard.jsx to render widgets from `widget_layout` dynamically
+  (filter by panel, sort by position, skip disabled)
+- Map widget type string → component (ClockWidget, WeatherWidget, etc.)
+- Fallback: widgets without `panel` default to right panel
+
+### Phase 2: Layout editor UI
+- Install `@dnd-kit/core` + `@dnd-kit/sortable`
+- New `LayoutEditor` component in SettingsPanel
+- Two-column drag area (Left Panel / Right Panel)
+- Each widget shown as a draggable card with:
+  - Drag handle
+  - Widget name
+  - Enable/disable toggle
+  - Gear icon → expands inline settings
+- Disabled widgets greyed out, sorted to bottom
+- Save reorders position + panel values via PATCH /api/dashboard/
+
+### Phase 3: Panel split ratio
+- Add `panel_split` to dashboard config (default: "60/40")
+- Slider in layout editor: 50/50, 60/40, 70/30
+- Dashboard.module.css reads split from config
+
+### Phase 4: Per-widget settings inline
+- Move ClockSettings, DexcomSettings into widget gear expandables
+- Each widget type defines its own settings form
+- Weather: location selector
+- Stocks: symbol list
+- News: source list
+- Calendar: calendar ID picker
+- Photos: picker + interval
 
 ---
 
