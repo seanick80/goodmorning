@@ -64,6 +64,19 @@
   gap: 1rem;
 }
 
+.dashboardContent {
+  transition: opacity 1.5s ease-in-out;
+}
+
+.dashboardVisible {
+  opacity: 1;
+}
+
+.dashboardHidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .exitFrameButton {
   position: fixed;
   bottom: 1.5rem;

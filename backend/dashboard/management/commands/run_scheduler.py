@@ -11,6 +11,7 @@ from django_apscheduler.jobstores import DjangoJobStore
 
 from dashboard.jobs import (
     fetch_calendar,
+    fetch_glucose,
     fetch_google_calendar,
     fetch_google_photos,
     fetch_news,
@@ -72,6 +73,14 @@ class Command(BaseCommand):
             fetch_google_photos,
             trigger=IntervalTrigger(minutes=60),
             id="fetch_google_photos",
+            max_instances=1,
+            replace_existing=True,
+        )
+
+        scheduler.add_job(
+            fetch_glucose,
+            trigger=IntervalTrigger(minutes=5),
+            id="fetch_glucose",
             max_instances=1,
             replace_existing=True,
         )

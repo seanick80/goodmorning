@@ -90,17 +90,41 @@ class StocksView(APIView):
 
 
 class CalendarView(APIView):
-    """GET /api/calendar/ -- returns today's calendar events."""
+    """GET /api/calendar/ -- returns today's events, plus tomorrow's if few remain."""
 
     def get(self, request):
-        today = date.today()
+        now = datetime.now(tz=timezone.utc)
+        today = now.date()
         today_start = datetime.combine(today, datetime.min.time(), tzinfo=timezone.utc)
         today_end = today_start + timedelta(days=1)
-        events = CalendarEvent.objects.filter(
-            start__gte=today_start,
-            start__lt=today_end,
-        ).order_by("start")
-        serializer = CalendarEventSerializer(events, many=True)
+        tomorrow_end = today_start + timedelta(days=2)
+
+        today_events = list(
+            CalendarEvent.objects.filter(
+                start__gte=today_start,
+                start__lt=today_end,
+            ).order_by("start")
+        )
+
+        # Count how many today events haven't ended yet
+        remaining_today = sum(
+            1 for e in today_events
+            if (e.end or e.start) > now
+        )
+
+        result = today_events
+        include_tomorrow = remaining_today <= 2
+
+        if include_tomorrow:
+            tomorrow_events = list(
+                CalendarEvent.objects.filter(
+                    start__gte=today_end,
+                    start__lt=tomorrow_end,
+                ).order_by("start")
+            )
+            result = today_events + tomorrow_events
+
+        serializer = CalendarEventSerializer(result, many=True)
         return Response(serializer.data)
 
 

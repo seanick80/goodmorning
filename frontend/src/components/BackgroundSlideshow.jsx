@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useDashboard } from "../hooks/useDashboard";
 import styles from "./BackgroundSlideshow.module.css";
 
@@ -14,7 +14,7 @@ function getPhotosConfig(dashboard) {
   return { count: media.length, interval };
 }
 
-export default function BackgroundSlideshow() {
+export default function BackgroundSlideshow({ onAdvance } = {}) {
   const { data: dashboard } = useDashboard();
   const { count, interval } = getPhotosConfig(dashboard);
   const [current, setCurrent] = useState(0);
@@ -22,38 +22,49 @@ export default function BackgroundSlideshow() {
   const [phase, setPhase] = useState("showing"); // "showing" | "preloading" | "fading"
   const timerRef = useRef(null);
   const preloadRef = useRef(null);
+  const onAdvanceRef = useRef(onAdvance);
+  const currentRef = useRef(current);
 
-  const advance = useCallback(() => {
-    if (count <= 1) return;
-    const nextIdx = (current + 1) % count;
-    setNext(nextIdx);
-    setPhase("preloading");
+  useEffect(() => {
+    onAdvanceRef.current = onAdvance;
+  }, [onAdvance]);
 
-    // Preload the next image
-    const img = new Image();
-    preloadRef.current = img;
-    img.onload = () => {
-      setPhase("fading");
-      setTimeout(() => {
-        setCurrent(nextIdx);
-        setNext(null);
-        setPhase("showing");
-      }, FADE_DURATION);
-    };
-    img.onerror = () => {
-      // Skip to next on error
-      setCurrent(nextIdx);
-      setNext(null);
-      setPhase("showing");
-    };
-    img.src = `/api/photos/${nextIdx}/?w=1920&h=1080`;
-  }, [current, count]);
+  useEffect(() => {
+    currentRef.current = current;
+  }, [current]);
 
   useEffect(() => {
     if (count <= 1) return;
+
+    function advance() {
+      const nextIdx = (currentRef.current + 1) % count;
+      setNext(nextIdx);
+      setPhase("preloading");
+
+      const img = new Image();
+      preloadRef.current = img;
+      img.onload = () => {
+        setPhase("fading");
+        setTimeout(() => {
+          setCurrent(nextIdx);
+          currentRef.current = nextIdx;
+          setNext(null);
+          setPhase("showing");
+          if (onAdvanceRef.current) onAdvanceRef.current(nextIdx);
+        }, FADE_DURATION);
+      };
+      img.onerror = () => {
+        setCurrent(nextIdx);
+        currentRef.current = nextIdx;
+        setNext(null);
+        setPhase("showing");
+      };
+      img.src = `/api/photos/${nextIdx}/?w=1920&h=1080`;
+    }
+
     timerRef.current = setInterval(advance, interval * 1000);
     return () => clearInterval(timerRef.current);
-  }, [count, interval, advance]);
+  }, [count, interval]);
 
   if (count === 0) return null;
 

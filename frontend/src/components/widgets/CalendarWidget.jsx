@@ -206,30 +206,51 @@ export default function CalendarWidget() {
         </>
       }
     >
-      {events.map((event, i) => {
-        // Strip recurring instance suffix (e.g. _20260331T034500Z) to get base event ID
-        const baseUid = event.uid?.replace(/_\d{8}T\d{6}Z?$/, "") ?? "";
-        const calUrl = baseUid
-          ? `https://calendar.google.com/calendar/r/eventedit/${baseUid}`
-          : null;
+      {(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const tomorrow = new Date(today);
+        tomorrow.setDate(tomorrow.getDate() + 1);
+
+        const todayEvents = events.filter((e) => new Date(e.start) < tomorrow);
+        const tomorrowEvents = events.filter((e) => new Date(e.start) >= tomorrow);
+
+        function renderEvent(event, i, isTomorrow) {
+          const baseUid = event.uid?.replace(/_\d{8}T\d{6}Z?$/, "") ?? "";
+          const calUrl = baseUid
+            ? `https://calendar.google.com/calendar/r/eventedit/${baseUid}`
+            : null;
+          return (
+            <a
+              key={i}
+              className={`${styles.event} ${isTomorrow ? styles.tomorrow : ""}`}
+              href={calUrl ?? undefined}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <span className={styles.time}>
+                {event.all_day ? "All day" : `${formatTime(event.start)} – ${formatTime(event.end)}`}
+              </span>
+              <span className={styles.title}>{event.title}</span>
+              {event.location && (
+                <span className={styles.location}>{event.location}</span>
+              )}
+            </a>
+          );
+        }
+
         return (
-          <a
-            key={i}
-            className={styles.event}
-            href={calUrl ?? undefined}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <span className={styles.time}>
-              {event.all_day ? "All day" : `${formatTime(event.start)} – ${formatTime(event.end)}`}
-            </span>
-            <span className={styles.title}>{event.title}</span>
-            {event.location && (
-              <span className={styles.location}>{event.location}</span>
+          <>
+            {todayEvents.map((e, i) => renderEvent(e, i, false))}
+            {tomorrowEvents.length > 0 && (
+              <>
+                <div className={styles.tomorrowHeader}>Tomorrow</div>
+                {tomorrowEvents.map((e, i) => renderEvent(e, `t${i}`, true))}
+              </>
             )}
-          </a>
+          </>
         );
-      })}
+      })()}
     </WidgetCard>
   );
 }

@@ -273,8 +273,55 @@ function DexcomSettings() {
   );
 }
 
+function getSavedFlashFreq(dashboard) {
+  if (!dashboard?.widget_layout) return 4;
+  const widget = dashboard.widget_layout.find((w) => w.widget === "photos");
+  return widget?.settings?.dashboard_flash_frequency ?? 4;
+}
+
+function getSavedFlashDuration(dashboard) {
+  if (!dashboard?.widget_layout) return 15;
+  const widget = dashboard.widget_layout.find((w) => w.widget === "photos");
+  return widget?.settings?.dashboard_flash_seconds ?? 15;
+}
+
 function PhotoFrameSection({ photoFrameMode, onToggle, hasPhotos }) {
+  const queryClient = useQueryClient();
+  const { data: dashboard } = useDashboard();
+  const [flashFreq, setFlashFreq] = useState(() => getSavedFlashFreq(dashboard));
+  const [flashDuration, setFlashDuration] = useState(() => getSavedFlashDuration(dashboard));
+  const freqSaveRef = useRef(null);
+  const durSaveRef = useRef(null);
+
   if (!hasPhotos) return null;
+
+  function savePhotoSetting(key, value) {
+    const widgetLayout = dashboard?.widget_layout ?? [];
+    const updatedLayout = widgetLayout.map((w) =>
+      w.widget === "photos"
+        ? { ...w, settings: { ...w.settings, [key]: value } }
+        : w
+    );
+    patchDashboard({ widget_layout: updatedLayout }).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    });
+  }
+
+  function handleFreqChange(e) {
+    const val = Number(e.target.value);
+    setFlashFreq(val);
+    clearTimeout(freqSaveRef.current);
+    freqSaveRef.current = setTimeout(() => savePhotoSetting("dashboard_flash_frequency", val), 500);
+  }
+
+  function handleDurationChange(e) {
+    const val = Number(e.target.value);
+    setFlashDuration(val);
+    clearTimeout(durSaveRef.current);
+    durSaveRef.current = setTimeout(() => savePhotoSetting("dashboard_flash_seconds", val), 500);
+  }
+
+  const freqLabel = flashFreq === 0 ? "Never" : `Every ${flashFreq} photos`;
 
   return (
     <div className={styles.section}>
@@ -291,6 +338,32 @@ function PhotoFrameSection({ photoFrameMode, onToggle, hasPhotos }) {
       >
         {photoFrameMode ? "Show Dashboard" : "Enter Photo Frame"}
       </button>
+      <label className={styles.sliderLabel}>
+        <span>Show dashboard: {freqLabel}</span>
+        <input
+          type="range"
+          min="0"
+          max="10"
+          step="1"
+          value={flashFreq}
+          onChange={handleFreqChange}
+          className={styles.slider}
+        />
+      </label>
+      {flashFreq > 0 && (
+        <label className={styles.sliderLabel}>
+          <span>Dashboard visible for {flashDuration}s</span>
+          <input
+            type="range"
+            min="5"
+            max="60"
+            step="5"
+            value={flashDuration}
+            onChange={handleDurationChange}
+            className={styles.slider}
+          />
+        </label>
+      )}
     </div>
   );
 }

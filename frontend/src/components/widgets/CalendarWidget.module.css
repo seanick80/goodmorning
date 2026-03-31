@@ -157,6 +157,24 @@
   border-color: rgba(255, 255, 255, 0.3);
 }
 
+.tomorrowHeader {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.35);
+  padding: 0.5rem 0 0.15rem;
+  margin-top: 0.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tomorrow .title {
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.tomorrow .time {
+  color: rgba(255, 255, 255, 0.35);
+}
+
 .connectLink {
   display: inline-block;
   padding: 0.4rem 1rem;
