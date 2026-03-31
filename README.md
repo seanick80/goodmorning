@@ -143,27 +143,57 @@ Copy `backend/.env.example` to `backend/.env` and configure:
 ```
 goodmorning/
   backend/
-    config/           # Django project settings
-    dashboard/        # Main Django app
-      models.py       # UserDashboard, WeatherCache, StockQuote, CalendarEvent, NewsHeadline, GlucoseReading
-      views.py        # DRF API views
-      serializers.py  # DRF serializers
-      services/       # External API integrations (weather, stocks, calendar, news, geocode)
-      jobs.py         # Scheduler job definitions
-      tests/          # pytest test suite
+    config/                 # Django settings, URLs, WSGI/ASGI
+    dashboard/              # Main Django app
+      models.py             # UserDashboard, WeatherCache, StockQuote,
+                            #   CalendarEvent, NewsHeadline, GlucoseReading
+      views.py              # DRF API views (weather, stocks, calendar,
+                            #   news, glucose, photos, auth, geocode)
+      serializers.py        # DRF serializers + input validation
+      urls.py               # API route definitions
+      jobs.py               # APScheduler jobs (weather, stocks, news,
+                            #   Google Calendar, Google Photos, glucose)
+      admin.py              # Django admin registrations
+      services/             # External API clients
+        weather.py          #   Open-Meteo API
+        stocks.py           #   Finnhub API
+        news.py             #   RSS feed parser (feedparser)
+        google_api.py       #   Google Calendar + Photos Picker APIs
+        glucose.py          #   Dexcom Share API (pydexcom)
+        geocode.py          #   Open-Meteo geocoding
+        _http.py            #   Shared retry/backoff HTTP helper
+      management/commands/
+        run_scheduler.py    # APScheduler management command
+        seed_data.py        # Dev data seeder
+        setup_google_oauth.py  # Google OAuth bootstrap
+      tests/                # pytest + factory_boy (128 tests)
     manage.py
   frontend/
     src/
-      api/            # Fetch wrappers for each endpoint
-      hooks/          # TanStack Query hooks
+      api/                  # Fetch wrappers (weather, stocks, calendar,
+                            #   news, glucose, dashboard, auth, geocode)
+      hooks/                # TanStack Query hooks (useWeather, useStocks, etc.)
       components/
-        widgets/      # ClockWidget, WeatherWidget, StocksWidget, CalendarWidget, NewsWidget, GlucoseWidget
-        mocks/        # UI layout and widget design mockups
-        Dashboard.jsx # Main Hero layout
-        BackgroundSlideshow.jsx  # Google Photos slideshow
-        SettingsPanel.jsx        # Settings panel (clock, photos, glucose, Google account)
-  docker-compose.yml  # PostgreSQL 16
-  deploy.sh           # One-command bootstrap & startup
+        Dashboard.jsx       # Main Hero layout (60/40 split)
+        BackgroundSlideshow.jsx  # Google Photos crossfade slideshow
+        SettingsPanel.jsx   # Settings (clock, photos, glucose, Google account)
+        AuthStatus.jsx      # Google OAuth status indicator
+        WidgetCard.jsx      # Shared glass-morphism card wrapper
+        StaleIndicator.tsx  # Data freshness warning icon
+        widgets/            # Clock, Weather, Stocks, Calendar, News,
+                            #   Glucose, LocationSelector
+        mocks/              # Static layout mockups (Grid, Hero, Band, Featured)
+  pi/                       # Raspberry Pi deployment configs
+    pi-setup.sh             #   First-time Pi bootstrap
+    pi-update.sh            #   On-Pi update (deps, migrate, restart)
+    pi-health.sh            #   Health check script
+    goodmorning-setup.sh    #   SSH key + initial config
+  deploy.sh                 # Local dev bootstrap & lifecycle
+  deploy-pi.sh              # Dev → Pi deployment (rsync or scp+tar)
+  docker-compose.yml        # PostgreSQL 16 (dev)
+  docs/
+    raspberry-pi-deployment.md  # Pi architecture, setup, troubleshooting
+    pi-setup-notes.md           # First-deploy gotchas
 ```
 
 ## Deployment Targets
