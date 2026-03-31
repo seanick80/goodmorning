@@ -171,6 +171,11 @@
   color: rgba(255, 255, 255, 0.3);
 }
 
+select.textInput option {
+  background: #1e1e28;
+  color: #fff;
+}
+
 .auxRow {
   display: flex;
   gap: 0.4rem;
