@@ -56,7 +56,12 @@ function getHourInTimezone(date, timezone) {
 }
 
 export default function ClockWidget({ settings }) {
-  const config = settings || DEFAULT_SETTINGS;
+  const config = {
+    ...DEFAULT_SETTINGS,
+    ...settings,
+    primary: { ...DEFAULT_SETTINGS.primary, ...settings?.primary },
+    aux: settings?.aux ?? DEFAULT_SETTINGS.aux,
+  };
   const hour12 = config.format !== "24h";
   const [now, setNow] = useState(new Date());
 
