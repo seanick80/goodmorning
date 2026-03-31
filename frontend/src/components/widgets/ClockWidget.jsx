@@ -10,6 +10,15 @@ const DEFAULT_SETTINGS = {
   format: "12h",
 };
 
+function isValidTimezone(tz) {
+  try {
+    Intl.DateTimeFormat("en-US", { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function getGreeting(hour) {
   if (hour >= 5 && hour < 12) return "Good Morning";
   if (hour >= 12 && hour < 17) return "Good Afternoon";
@@ -60,7 +69,9 @@ export default function ClockWidget({ settings }) {
     ...DEFAULT_SETTINGS,
     ...settings,
     primary: { ...DEFAULT_SETTINGS.primary, ...settings?.primary },
-    aux: settings?.aux ?? DEFAULT_SETTINGS.aux,
+    aux: (settings?.aux ?? DEFAULT_SETTINGS.aux).filter(
+      (c) => c.timezone && isValidTimezone(c.timezone),
+    ),
   };
   const hour12 = config.format !== "24h";
   const [now, setNow] = useState(new Date());
