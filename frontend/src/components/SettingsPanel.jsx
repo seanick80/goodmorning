@@ -368,12 +368,48 @@ function PhotoFrameSection({ photoFrameMode, onToggle, hasPhotos }) {
   );
 }
 
+const COMMON_TIMEZONES = [
+  { value: "Pacific/Honolulu", label: "Hawaii (HST)" },
+  { value: "America/Anchorage", label: "Alaska (AKST)" },
+  { value: "America/Los_Angeles", label: "Pacific (PST)" },
+  { value: "America/Denver", label: "Mountain (MST)" },
+  { value: "America/Chicago", label: "Central (CST)" },
+  { value: "America/New_York", label: "Eastern (EST)" },
+  { value: "America/Halifax", label: "Atlantic (AST)" },
+  { value: "America/Sao_Paulo", label: "Brasilia (BRT)" },
+  { value: "Atlantic/Reykjavik", label: "Iceland (GMT)" },
+  { value: "Europe/London", label: "London (GMT)" },
+  { value: "Europe/Paris", label: "Paris (CET)" },
+  { value: "Europe/Berlin", label: "Berlin (CET)" },
+  { value: "Europe/Helsinki", label: "Helsinki (EET)" },
+  { value: "Europe/Moscow", label: "Moscow (MSK)" },
+  { value: "Asia/Dubai", label: "Dubai (GST)" },
+  { value: "Asia/Kolkata", label: "India (IST)" },
+  { value: "Asia/Bangkok", label: "Bangkok (ICT)" },
+  { value: "Asia/Singapore", label: "Singapore (SGT)" },
+  { value: "Asia/Shanghai", label: "China (CST)" },
+  { value: "Asia/Tokyo", label: "Tokyo (JST)" },
+  { value: "Asia/Seoul", label: "Seoul (KST)" },
+  { value: "Australia/Sydney", label: "Sydney (AEST)" },
+  { value: "Australia/Melbourne", label: "Melbourne (AEST)" },
+  { value: "Australia/Perth", label: "Perth (AWST)" },
+  { value: "Australia/Adelaide", label: "Adelaide (ACST)" },
+  { value: "Pacific/Auckland", label: "Auckland (NZST)" },
+];
+
+const VALID_TZ_VALUES = new Set(COMMON_TIMEZONES.map((tz) => tz.value));
+
 function getClockSettings(dashboard) {
   if (!dashboard?.widget_layout) return { format: "12h", aux: [] };
   const widget = dashboard.widget_layout.find((w) => w.widget === "clock");
+  const rawAux = widget?.settings?.aux ?? [];
+  const aux = rawAux.map((c) => ({
+    ...c,
+    timezone: VALID_TZ_VALUES.has(c.timezone) ? c.timezone : "America/New_York",
+  }));
   return {
     format: widget?.settings?.format ?? "12h",
-    aux: widget?.settings?.aux ?? [],
+    aux,
   };
 }
 
@@ -466,13 +502,17 @@ function ClockSettings() {
             className={styles.textInput}
             placeholder="Name"
           />
-          <input
-            type="text"
+          <select
             value={clock.timezone}
             onChange={(e) => handleAuxChange(i, "timezone", e.target.value)}
             className={styles.textInput}
-            placeholder="e.g. America/Los_Angeles"
-          />
+          >
+            {COMMON_TIMEZONES.map((tz) => (
+              <option key={tz.value} value={tz.value}>
+                {tz.label}
+              </option>
+            ))}
+          </select>
           <button
             type="button"
             onClick={() => handleRemoveAux(i)}
