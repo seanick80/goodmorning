@@ -10,7 +10,6 @@ from apscheduler.triggers.interval import IntervalTrigger
 from django_apscheduler.jobstores import DjangoJobStore
 
 from dashboard.jobs import (
-    fetch_calendar,
     fetch_glucose,
     fetch_google_calendar,
     fetch_google_photos,
@@ -41,14 +40,6 @@ class Command(BaseCommand):
             fetch_stocks,
             trigger=IntervalTrigger(minutes=5),
             id="fetch_stocks",
-            max_instances=1,
-            replace_existing=True,
-        )
-
-        scheduler.add_job(
-            fetch_calendar,
-            trigger=IntervalTrigger(minutes=30),
-            id="fetch_calendar",
             max_instances=1,
             replace_existing=True,
         )

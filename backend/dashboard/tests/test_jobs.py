@@ -209,54 +209,45 @@ class TestFetchStocksJob:
 
 
 class TestFetchCalendarJob:
-    def _make_calendar_dashboard(self, ics_urls: list[str]) -> None:
-        UserDashboardFactory(
-            widget_layout=[
-                {
-                    "widget": "calendar",
-                    "enabled": True,
-                    "position": 0,
-                    "settings": {"ics_urls": ics_urls},
-                },
-            ]
+    def test_cleans_up_stale_ics_events(self):
+        """fetch_calendar removes leftover ICS-sourced events."""
+        CalendarEvent.objects.create(
+            uid="stale-1@google.com",
+            title="Stale ICS Event",
+            start=datetime(2026, 3, 17, 10, 0, tzinfo=timezone.utc),
+            end=datetime(2026, 3, 17, 10, 30, tzinfo=timezone.utc),
+            source_url="https://calendar.google.com/ical/old.ics",
+        )
+        CalendarEvent.objects.create(
+            uid="google-1",
+            title="Google Event",
+            start=datetime(2026, 3, 17, 11, 0, tzinfo=timezone.utc),
+            end=datetime(2026, 3, 17, 11, 30, tzinfo=timezone.utc),
+            source_url="google:1",
         )
 
-    def test_creates_calendar_events(self):
-        self._make_calendar_dashboard(["https://cal.example.com/feed.ics"])
-        mock_events = [
-            {
-                "uid": "evt-1@example.com",
-                "title": "Morning Standup",
-                "description": "",
-                "location": "Room A",
-                "start": datetime(2026, 3, 17, 10, 0, tzinfo=timezone.utc),
-                "end": datetime(2026, 3, 17, 10, 30, tzinfo=timezone.utc),
-                "all_day": False,
-            },
-        ]
-        with patch("dashboard.jobs.fetch_calendar_events", return_value=mock_events), \
-             patch.dict("os.environ", {"USER_CALENDAR": ""}, clear=False):
-            from dashboard.jobs import fetch_calendar
+        from dashboard.jobs import fetch_calendar
 
-            fetch_calendar()
+        fetch_calendar()
 
         assert CalendarEvent.objects.count() == 1
-        event = CalendarEvent.objects.first()
-        assert event.title == "Morning Standup"
-        assert event.source_url == "https://cal.example.com/feed.ics"
+        assert CalendarEvent.objects.first().title == "Google Event"
 
-    def test_handles_service_error_gracefully(self):
-        self._make_calendar_dashboard(["https://cal.example.com/feed.ics"])
-        with patch(
-            "dashboard.jobs.fetch_calendar_events",
-            side_effect=Exception("Network error"),
-        ), patch.dict("os.environ", {"USER_CALENDAR": ""}, clear=False):
-            from dashboard.jobs import fetch_calendar
+    def test_no_op_when_no_stale_events(self):
+        """fetch_calendar does nothing when only Google events exist."""
+        CalendarEvent.objects.create(
+            uid="google-1",
+            title="Google Event",
+            start=datetime(2026, 3, 17, 11, 0, tzinfo=timezone.utc),
+            end=datetime(2026, 3, 17, 11, 30, tzinfo=timezone.utc),
+            source_url="google:1",
+        )
 
-            # Should not raise
-            fetch_calendar()
+        from dashboard.jobs import fetch_calendar
 
-        assert CalendarEvent.objects.count() == 0
+        fetch_calendar()
+
+        assert CalendarEvent.objects.count() == 1
 
 
 class TestFetchNewsJob:

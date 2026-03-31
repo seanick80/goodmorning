@@ -14,7 +14,6 @@ from dashboard.models import (
     UserDashboard,
     WeatherCache,
 )
-from dashboard.services.calendar import fetch_calendar_events
 from dashboard.services.news import fetch_news_headlines
 from dashboard.services.stocks import fetch_stock_quote
 from dashboard.services.weather import fetch_weather_data
@@ -81,40 +80,19 @@ def fetch_stocks() -> None:
 
 
 def fetch_calendar() -> None:
-    """Fetch calendar events from all configured ICS feeds."""
-    dashboards = UserDashboard.objects.all()
-    ics_urls: set[str] = set()
+    """Legacy ICS calendar job — now a no-op.
 
-    # Include calendar URL from environment if set (keeps URL out of DB/source)
-    env_calendar = os.environ.get("USER_CALENDAR", "")
-    if env_calendar:
-        ics_urls.add(env_calendar)
-
-    for dashboard in dashboards:
-        for widget in dashboard.widget_layout:
-            if widget.get("widget") == "calendar" and widget.get("enabled"):
-                ics_urls.update(widget["settings"].get("ics_urls", []))
-
-    for ics_url in sorted(ics_urls):
-        try:
-            events = fetch_calendar_events(ics_url)
-            # Delete today's old events for this source, then recreate
-            today_start = datetime.combine(date.today(), datetime.min.time(), tzinfo=timezone.utc)
-            today_end = today_start + timedelta(days=1)
-            CalendarEvent.objects.filter(
-                source_url=ics_url,
-                start__gte=today_start,
-                start__lt=today_end,
-            ).delete()
-
-            for event_data in events:
-                CalendarEvent.objects.create(
-                    source_url=ics_url,
-                    **event_data,
-                )
-            logger.info("Calendar updated from %s (%d events)", ics_url, len(events))
-        except Exception:
-            logger.exception("Failed to fetch calendar from %s", ics_url)
+    Calendar events are fetched via Google Calendar API (fetch_google_calendar).
+    This function is kept only because the scheduler references it; it cleans up
+    any leftover ICS-sourced events from before the migration to Google OAuth.
+    """
+    stale = CalendarEvent.objects.exclude(
+        source_url__startswith="google:",
+    ).exclude(source_url="")
+    if stale.exists():
+        count = stale.count()
+        stale.delete()
+        logger.info("Cleaned up %d stale ICS calendar events", count)
 
 
 def fetch_news() -> None:
