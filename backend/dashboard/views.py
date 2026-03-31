@@ -229,15 +229,13 @@ class WeatherLocationView(APIView):
     """
 
     def post(self, request):
-        lat = request.data.get("latitude")
-        lon = request.data.get("longitude")
-        location_name = request.data.get("location_name", "")
+        from .serializers import WeatherLocationSerializer
 
-        if lat is None or lon is None:
-            return Response(
-                {"detail": "latitude and longitude are required."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        serializer = WeatherLocationSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        lat = serializer.validated_data["latitude"]
+        lon = serializer.validated_data["longitude"]
+        location_name = serializer.validated_data["location_name"]
 
         # Update dashboard config
         user = User.objects.filter(is_superuser=True).first()

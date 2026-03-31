@@ -98,7 +98,7 @@ class CalendarEventFactory(DjangoModelFactory):
     class Meta:
         model = CalendarEvent
 
-    source_url = "https://calendar.example.com/feed.ics"
+    source_url = "google:1"
     uid = factory.Sequence(lambda n: f"event-{n}@example.com")
     title = factory.Sequence(lambda n: f"Meeting {n}")
     description = ""

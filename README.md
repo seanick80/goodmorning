@@ -95,7 +95,7 @@ After startup:
 
 ### Run Tests
 ```bash
-# Backend (134 tests) — requires PostgreSQL running
+# Backend (128 tests) — requires PostgreSQL running
 cd backend
 source .venv/Scripts/activate
 python -m pytest -v

@@ -71,9 +71,39 @@ class GlucoseReadingSerializer(serializers.ModelSerializer):
         ]
 
 
+ALLOWED_WIDGETS = {"clock", "weather", "stocks", "calendar", "news", "photos", "glucose"}
+
+
 class UserDashboardSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserDashboard
         fields = ["widget_layout"]
 
+    def validate_widget_layout(self, value: object) -> list:
+        if not isinstance(value, list):
+            raise serializers.ValidationError("widget_layout must be a list.")
+        for i, widget in enumerate(value):
+            if not isinstance(widget, dict):
+                raise serializers.ValidationError(f"Item {i} must be an object.")
+            widget_type = widget.get("widget")
+            if widget_type not in ALLOWED_WIDGETS:
+                raise serializers.ValidationError(
+                    f"Item {i}: unknown widget type '{widget_type}'."
+                )
+            if not isinstance(widget.get("enabled", True), bool):
+                raise serializers.ValidationError(
+                    f"Item {i}: 'enabled' must be a boolean."
+                )
+            if not isinstance(widget.get("settings", {}), dict):
+                raise serializers.ValidationError(
+                    f"Item {i}: 'settings' must be an object."
+                )
+        return value
 
+
+class WeatherLocationSerializer(serializers.Serializer):
+    latitude = serializers.FloatField(min_value=-90, max_value=90)
+    longitude = serializers.FloatField(min_value=-180, max_value=180)
+    location_name = serializers.CharField(
+        max_length=500, required=False, default="",
+    )

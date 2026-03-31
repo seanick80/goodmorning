@@ -140,7 +140,7 @@ class TestWeatherLocationView:
             format="json",
         )
         assert response.status_code == 400
-        assert "latitude" in response.json()["detail"]
+        assert "latitude" in response.json()
 
     def test_returns_404_without_superuser(self, api_client):
         response = api_client.post(

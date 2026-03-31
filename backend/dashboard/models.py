@@ -92,10 +92,10 @@ class StockQuote(models.Model):
 
 
 class CalendarEvent(models.Model):
-    """Cached calendar event from ICS feed."""
+    """Cached calendar event from Google Calendar API."""
 
-    source_url = models.URLField(help_text="ICS feed URL this event came from")
-    uid = models.CharField(max_length=255, help_text="iCal UID for deduplication")
+    source_url = models.URLField(help_text="Event source identifier (e.g. 'google:1')")
+    uid = models.CharField(max_length=255, help_text="Event UID for deduplication")
     title = models.CharField(max_length=500)
     description = models.TextField(blank=True, default="")
     location = models.CharField(max_length=500, blank=True, default="")

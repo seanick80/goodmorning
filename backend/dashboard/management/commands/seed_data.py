@@ -38,7 +38,7 @@ DEFAULT_WIDGET_LAYOUT = [
         "widget": "calendar",
         "enabled": True,
         "position": 3,
-        "settings": {"ics_urls": []},
+        "settings": {"google_calendar_ids": []},
     },
     {
         "widget": "news",
@@ -137,7 +137,7 @@ class Command(BaseCommand):
 
         # Sample calendar events
         CalendarEvent.objects.update_or_create(
-            source_url="https://example.com/cal.ics",
+            source_url="google:1",
             uid="standup-001",
             defaults={
                 "title": "Team standup",
@@ -148,7 +148,7 @@ class Command(BaseCommand):
             },
         )
         CalendarEvent.objects.update_or_create(
-            source_url="https://example.com/cal.ics",
+            source_url="google:1",
             uid="review-001",
             defaults={
                 "title": "Product review",
@@ -159,7 +159,7 @@ class Command(BaseCommand):
             },
         )
         CalendarEvent.objects.update_or_create(
-            source_url="https://example.com/cal.ics",
+            source_url="google:1",
             uid="lunch-001",
             defaults={
                 "title": "Lunch with Sarah",

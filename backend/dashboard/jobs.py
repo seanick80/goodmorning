@@ -79,21 +79,6 @@ def fetch_stocks() -> None:
             logger.exception("Failed to update stock for %s", symbol)
 
 
-def fetch_calendar() -> None:
-    """Legacy ICS calendar job — now a no-op.
-
-    Calendar events are fetched via Google Calendar API (fetch_google_calendar).
-    This function is kept only because the scheduler references it; it cleans up
-    any leftover ICS-sourced events from before the migration to Google OAuth.
-    """
-    stale = CalendarEvent.objects.exclude(
-        source_url__startswith="google:",
-    ).exclude(source_url="")
-    if stale.exists():
-        count = stale.count()
-        stale.delete()
-        logger.info("Cleaned up %d stale ICS calendar events", count)
-
 
 def fetch_news() -> None:
     """Fetch news headlines from all configured RSS feeds."""

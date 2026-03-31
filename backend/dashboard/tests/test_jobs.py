@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from unittest.mock import patch
 
-from dashboard.models import CalendarEvent, NewsHeadline, StockQuote, WeatherCache
+from dashboard.models import NewsHeadline, StockQuote, WeatherCache
 
 from .conftest import UserDashboardFactory
 
@@ -206,48 +206,6 @@ class TestFetchStocksJob:
             fetch_stocks()
 
         assert StockQuote.objects.count() == 0
-
-
-class TestFetchCalendarJob:
-    def test_cleans_up_stale_ics_events(self):
-        """fetch_calendar removes leftover ICS-sourced events."""
-        CalendarEvent.objects.create(
-            uid="stale-1@google.com",
-            title="Stale ICS Event",
-            start=datetime(2026, 3, 17, 10, 0, tzinfo=timezone.utc),
-            end=datetime(2026, 3, 17, 10, 30, tzinfo=timezone.utc),
-            source_url="https://calendar.google.com/ical/old.ics",
-        )
-        CalendarEvent.objects.create(
-            uid="google-1",
-            title="Google Event",
-            start=datetime(2026, 3, 17, 11, 0, tzinfo=timezone.utc),
-            end=datetime(2026, 3, 17, 11, 30, tzinfo=timezone.utc),
-            source_url="google:1",
-        )
-
-        from dashboard.jobs import fetch_calendar
-
-        fetch_calendar()
-
-        assert CalendarEvent.objects.count() == 1
-        assert CalendarEvent.objects.first().title == "Google Event"
-
-    def test_no_op_when_no_stale_events(self):
-        """fetch_calendar does nothing when only Google events exist."""
-        CalendarEvent.objects.create(
-            uid="google-1",
-            title="Google Event",
-            start=datetime(2026, 3, 17, 11, 0, tzinfo=timezone.utc),
-            end=datetime(2026, 3, 17, 11, 30, tzinfo=timezone.utc),
-            source_url="google:1",
-        )
-
-        from dashboard.jobs import fetch_calendar
-
-        fetch_calendar()
-
-        assert CalendarEvent.objects.count() == 1
 
 
 class TestFetchNewsJob:

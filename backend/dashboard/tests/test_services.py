@@ -2,14 +2,13 @@
 
 from __future__ import annotations
 
-from datetime import date, datetime, time, timezone
+from datetime import datetime, time, timezone
 from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
 import requests_mock as rm
 
-from dashboard.services.calendar import fetch_calendar_events
 from dashboard.services.news import fetch_news_headlines
 from dashboard.services.stocks import FINNHUB_QUOTE_URL, fetch_stock_quote
 from dashboard.services.weather import OPEN_METEO_URL, fetch_weather_data
@@ -135,72 +134,6 @@ class TestFetchStockQuote:
             result = fetch_stock_quote("INVALID", "test-api-key")
 
         assert result is None
-
-
-SAMPLE_ICS = """\
-BEGIN:VCALENDAR
-VERSION:2.0
-PRODID:-//Test//Test//EN
-BEGIN:VEVENT
-UID:today-event@example.com
-SUMMARY:Today's Meeting
-DTSTART:{today}T100000Z
-DTEND:{today}T110000Z
-LOCATION:Room A
-DESCRIPTION:Discuss project
-END:VEVENT
-BEGIN:VEVENT
-UID:tomorrow-event@example.com
-SUMMARY:Tomorrow's Meeting
-DTSTART:{tomorrow}T140000Z
-DTEND:{tomorrow}T150000Z
-END:VEVENT
-END:VCALENDAR
-"""
-
-
-class TestFetchCalendarEvents:
-    def _make_ics(self) -> str:
-        today = date.today().strftime("%Y%m%d")
-        from datetime import timedelta
-        tomorrow = (date.today() + timedelta(days=1)).strftime("%Y%m%d")
-        return SAMPLE_ICS.format(today=today, tomorrow=tomorrow)
-
-    def test_parses_todays_events(self):
-        ics_content = self._make_ics()
-        with rm.Mocker() as m:
-            m.get("https://cal.example.com/feed.ics", content=ics_content.encode())
-            events = fetch_calendar_events("https://cal.example.com/feed.ics")
-
-        assert len(events) == 1
-        assert events[0]["title"] == "Today's Meeting"
-        assert events[0]["uid"] == "today-event@example.com"
-        assert events[0]["location"] == "Room A"
-        assert events[0]["description"] == "Discuss project"
-
-    def test_filters_out_non_today_events(self):
-        ics_content = self._make_ics()
-        with rm.Mocker() as m:
-            m.get("https://cal.example.com/feed.ics", content=ics_content.encode())
-            events = fetch_calendar_events("https://cal.example.com/feed.ics")
-
-        # Only today's event, not tomorrow's
-        titles = [e["title"] for e in events]
-        assert "Tomorrow's Meeting" not in titles
-
-    def test_handles_http_error(self):
-        with rm.Mocker() as m:
-            m.get("https://cal.example.com/feed.ics", status_code=500)
-            events = fetch_calendar_events("https://cal.example.com/feed.ics")
-
-        assert events == []
-
-    def test_handles_invalid_ics(self):
-        with rm.Mocker() as m:
-            m.get("https://cal.example.com/feed.ics", content=b"not valid ics")
-            events = fetch_calendar_events("https://cal.example.com/feed.ics")
-
-        assert events == []
 
 
 class TestFetchNewsHeadlines:
