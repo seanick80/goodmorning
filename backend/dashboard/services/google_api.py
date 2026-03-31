@@ -39,6 +39,11 @@ def get_google_credentials(user: User) -> Credentials | None:
 
     from django.conf import settings
 
+    # google-auth compares expiry with utcnow() (naive), so strip tz
+    expiry = token.expires_at
+    if expiry is not None and expiry.tzinfo is not None:
+        expiry = expiry.replace(tzinfo=None)
+
     credentials = Credentials(
         token=token.token,
         refresh_token=token.token_secret,
@@ -46,6 +51,7 @@ def get_google_credentials(user: User) -> Credentials | None:
         client_id=settings.GOOGLE_CLIENT_ID,
         client_secret=settings.GOOGLE_CLIENT_SECRET,
         scopes=GOOGLE_SCOPES,
+        expiry=expiry,
     )
 
     # Persist refreshed access token back to allauth
@@ -54,7 +60,8 @@ def get_google_credentials(user: User) -> Credentials | None:
 
         credentials.refresh(Request())
         token.token = credentials.token
-        token.save(update_fields=["token"])
+        token.expires_at = credentials.expiry
+        token.save(update_fields=["token", "expires_at"])
         logger.info("Refreshed Google access token for %s", user.username)
 
     return credentials
