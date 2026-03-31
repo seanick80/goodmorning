@@ -148,7 +148,13 @@ sync_with_scp() {
     ssh "$PI_USER@$PI_HOST" "\
         sudo rm -rf $TMPDIR && \
         sudo mkdir -p $TMPDIR/backend && \
-        sudo tar xzf /tmp/gm-backend.tar.gz -C $TMPDIR --strip-components=1 && \
+        sudo tar xzf /tmp/gm-backend.tar.gz -C $TMPDIR/backend --strip-components=1 && \
+        for f in manage.py config/settings.py dashboard/views.py; do \
+            if [ ! -f $TMPDIR/backend/\$f ]; then \
+                echo \"DEPLOY ABORT: missing $TMPDIR/backend/\$f after extraction\" >&2; \
+                exit 1; \
+            fi; \
+        done && \
         sudo cp -a $PI_DIR/backend/.venv $TMPDIR/backend/.venv && \
         sudo cp -a $PI_DIR/backend/.env  $TMPDIR/backend/.env && \
         sudo cp -a $PI_DIR/backend/logs  $TMPDIR/backend/logs 2>/dev/null; \
@@ -222,4 +228,25 @@ case "$MODE" in
         ;;
 esac
 
+# -------------------------------------------------------------------
+# Post-deploy verification
+# -------------------------------------------------------------------
+info "Verifying deploy..."
+VERIFY_RESULT=$(ssh "$PI_USER@$PI_HOST" "\
+    STATUS=0; \
+    for f in manage.py config/settings.py dashboard/views.py dashboard/jobs.py; do \
+        if [ ! -f $PI_DIR/backend/\$f ]; then \
+            echo \"MISSING: $PI_DIR/backend/\$f\"; STATUS=1; \
+        fi; \
+    done; \
+    if [ ! -d $PI_DIR/frontend/dist ]; then \
+        echo 'MISSING: frontend/dist/'; STATUS=1; \
+    fi; \
+    if ! curl -sf -o /dev/null http://127.0.0.1:8000/api/dashboard/; then \
+        echo 'FAIL: API not responding'; STATUS=1; \
+    fi; \
+    exit \$STATUS" 2>&1) || {
+    fail "Post-deploy verification FAILED:\n$VERIFY_RESULT"
+}
+ok "Deploy verified — all files present, API responding."
 ok "Deploy complete."
