@@ -33,7 +33,7 @@ export default function StocksWidget() {
           <a
             key={stock.symbol}
             className={styles.row}
-            href={`https://finance.google.com/finance/quote/${stock.symbol}:NASDAQ`}
+            href={`https://www.google.com/finance/quote/${stock.symbol}`}
             target="_blank"
             rel="noopener noreferrer"
           >
