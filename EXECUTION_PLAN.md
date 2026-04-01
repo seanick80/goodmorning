@@ -55,7 +55,12 @@ The Good Morning Dashboard is a personal morning information display designed to
 | Dead code cleanup (ICS removal, unused deps) | DONE |
 | Input validation (widget_layout schema, coordinate bounds) | DONE |
 | Widget layout editor (drag-drop, enable/disable, configure) | DONE |
-| Configurable news feeds + keywords | Backlog |
+| Configurable news feeds + keywords (news trawler) | DONE |
+| Kiosk mode (disable external links for touchscreen) | DONE |
+| Compact layout for small screens (1280x720 DSI) | DONE |
+| Touch-friendly layout editor (TouchSensor, larger targets) | DONE |
+| DSI touchscreen rotation + touch mapping (Pi) | DONE (config only) |
+| Test suite: 137 backend + 23 frontend (vitest) | DONE |
 | Privacy policy page | Not started |
 
 ---
