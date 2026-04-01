@@ -20,30 +20,35 @@ DEFAULT_WIDGET_LAYOUT = [
         "widget": "clock",
         "enabled": True,
         "position": 0,
+        "panel": "left",
         "settings": {"format": "12h", "show_greeting": True},
     },
     {
         "widget": "weather",
         "enabled": True,
         "position": 1,
+        "panel": "left",
         "settings": {"units": "fahrenheit", "latitude": 40.7128, "longitude": -74.006},
     },
     {
         "widget": "stocks",
         "enabled": True,
-        "position": 2,
+        "position": 0,
+        "panel": "right",
         "settings": {"symbols": ["AAPL", "GOOGL", "MSFT"]},
     },
     {
         "widget": "calendar",
         "enabled": True,
-        "position": 3,
+        "position": 1,
+        "panel": "right",
         "settings": {"google_calendar_ids": []},
     },
     {
         "widget": "news",
         "enabled": True,
-        "position": 4,
+        "position": 2,
+        "panel": "right",
         "settings": {
             "sources": [
                 {"name": "BBC News", "url": "https://feeds.bbci.co.uk/news/rss.xml"},

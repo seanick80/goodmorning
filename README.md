@@ -27,8 +27,10 @@ A full-stack web dashboard designed for a tablet display in a living room. Shows
 ## Layout
 
 Uses a **Hero layout** (60/40 split):
-- **Left panel:** Clock (multi-timezone: primary + 0-3 configurable aux) and Weather
+- **Left panel (default):** Clock (multi-timezone: primary + 0-3 configurable aux) and Weather
 - **Right panel:** Glucose, Stocks, Calendar, and News stacked vertically
+
+Widget layout is fully configurable — drag-and-drop widgets between panels, reorder, enable/disable via the Settings panel.
 
 Background photo slideshow from Google Photos with configurable crossfade interval.
 
@@ -95,7 +97,7 @@ After startup:
 
 ### Run Tests
 ```bash
-# Backend (128 tests) — requires PostgreSQL running
+# Backend (133 tests) — requires PostgreSQL running
 cd backend
 source .venv/Scripts/activate
 python -m pytest -v

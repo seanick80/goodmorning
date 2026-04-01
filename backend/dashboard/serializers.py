@@ -72,6 +72,7 @@ class GlucoseReadingSerializer(serializers.ModelSerializer):
 
 
 ALLOWED_WIDGETS = {"clock", "weather", "stocks", "calendar", "news", "photos", "glucose"}
+ALLOWED_PANELS = {"left", "right"}
 
 
 class UserDashboardSerializer(serializers.ModelSerializer):
@@ -97,6 +98,11 @@ class UserDashboardSerializer(serializers.ModelSerializer):
             if not isinstance(widget.get("settings", {}), dict):
                 raise serializers.ValidationError(
                     f"Item {i}: 'settings' must be an object."
+                )
+            panel = widget.get("panel")
+            if panel is not None and panel not in ALLOWED_PANELS:
+                raise serializers.ValidationError(
+                    f"Item {i}: 'panel' must be 'left' or 'right'."
                 )
         return value
 

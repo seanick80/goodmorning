@@ -41,7 +41,7 @@ The Good Morning Dashboard is a personal morning information display designed to
 | Google OAuth (django-allauth, Calendar + Photos) | DONE |
 | Background photo slideshow (Google Photos Picker) | DONE |
 | CSRF token handling in frontend | DONE |
-| Test suite: 128 backend + 22 frontend (vitest) | DONE |
+| Test suite: 133 backend + 22 frontend (vitest) | DONE |
 | Slideshow crossfade + configurable interval | DONE |
 | Dexcom glucose widget (CGM monitoring) | DONE |
 | Photo frame mode (with dashboard flash) | DONE |
@@ -54,7 +54,7 @@ The Good Morning Dashboard is a personal morning information display designed to
 | Deploy scp+tar extraction bug fix | DONE |
 | Dead code cleanup (ICS removal, unused deps) | DONE |
 | Input validation (widget_layout schema, coordinate bounds) | DONE |
-| Widget layout editor (drag-drop, enable/disable, configure) | In Progress |
+| Widget layout editor (drag-drop, enable/disable, configure) | DONE |
 | Configurable news feeds + keywords | Backlog |
 | Privacy policy page | Not started |
 

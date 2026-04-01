@@ -8,6 +8,7 @@ import {
   fetchPhotosPickerMedia,
   patchDashboard,
 } from "../api/auth";
+import LayoutEditor from "./LayoutEditor";
 import styles from "./SettingsPanel.module.css";
 
 function getSavedInterval(dashboard) {
@@ -591,6 +592,7 @@ export default function SettingsPanel({ onClose, photoFrameMode, onTogglePhotoFr
             {"\u2715"}
           </button>
         </div>
+        <LayoutEditor />
         <ClockSettings />
         <PhotoFrameSection
           photoFrameMode={photoFrameMode}

@@ -118,6 +118,79 @@ class TestDashboardView:
         )
         assert response.status_code == 404
 
+    def test_patch_accepts_panel_field(self, api_client, superuser):
+        UserDashboardFactory(user=superuser)
+        layout = [
+            {"widget": "clock", "enabled": True, "position": 0, "panel": "left", "settings": {}},
+            {"widget": "weather", "enabled": True, "position": 1, "panel": "left", "settings": {}},
+            {"widget": "stocks", "enabled": True, "position": 0, "panel": "right", "settings": {}},
+        ]
+        response = api_client.patch(
+            "/api/dashboard/",
+            data={"widget_layout": layout},
+            format="json",
+        )
+        assert response.status_code == 200
+        saved = response.json()["widget_layout"]
+        assert saved[0]["panel"] == "left"
+        assert saved[2]["panel"] == "right"
+
+    def test_patch_rejects_invalid_panel(self, api_client, superuser):
+        UserDashboardFactory(user=superuser)
+        layout = [
+            {"widget": "clock", "enabled": True, "position": 0, "panel": "center", "settings": {}},
+        ]
+        response = api_client.patch(
+            "/api/dashboard/",
+            data={"widget_layout": layout},
+            format="json",
+        )
+        assert response.status_code == 400
+
+    def test_patch_accepts_layout_without_panel(self, api_client, superuser):
+        """Widgets without panel field should still be accepted (backwards compat)."""
+        UserDashboardFactory(user=superuser)
+        layout = [
+            {"widget": "clock", "enabled": True, "position": 0, "settings": {}},
+        ]
+        response = api_client.patch(
+            "/api/dashboard/",
+            data={"widget_layout": layout},
+            format="json",
+        )
+        assert response.status_code == 200
+
+    def test_patch_rejects_unknown_widget_type(self, api_client, superuser):
+        UserDashboardFactory(user=superuser)
+        layout = [
+            {"widget": "unknown", "enabled": True, "position": 0, "settings": {}},
+        ]
+        response = api_client.patch(
+            "/api/dashboard/",
+            data={"widget_layout": layout},
+            format="json",
+        )
+        assert response.status_code == 400
+
+    def test_patch_full_layout_with_disabled_widgets(self, api_client, superuser):
+        UserDashboardFactory(user=superuser)
+        layout = [
+            {"widget": "clock", "enabled": True, "position": 0, "panel": "left", "settings": {}},
+            {"widget": "weather", "enabled": False, "position": 1, "panel": "left", "settings": {}},
+            {"widget": "stocks", "enabled": True, "position": 0, "panel": "right", "settings": {}},
+            {"widget": "glucose", "enabled": False, "position": 1, "panel": "right", "settings": {}},
+        ]
+        response = api_client.patch(
+            "/api/dashboard/",
+            data={"widget_layout": layout},
+            format="json",
+        )
+        assert response.status_code == 200
+        saved = response.json()["widget_layout"]
+        assert len(saved) == 4
+        assert saved[1]["enabled"] is False
+        assert saved[3]["enabled"] is False
+
 
 class TestStocksView:
     def test_returns_stock_quotes_ordered_by_symbol(self, api_client):
@@ -168,16 +241,19 @@ class TestCalendarView:
     def test_returns_todays_events(self, api_client):
         from datetime import datetime, timedelta, timezone
 
-        today = datetime.combine(date.today(), datetime.min.time(), tzinfo=timezone.utc)
+        today = datetime.now(tz=timezone.utc).replace(
+            hour=0, minute=0, second=0, microsecond=0,
+        )
+        # Events in the future today so they count as "remaining"
         CalendarEventFactory(
             title="Morning Standup",
-            start=today.replace(hour=9),
-            end=today.replace(hour=9, minute=30),
+            start=today.replace(hour=23),
+            end=today.replace(hour=23, minute=30),
         )
         CalendarEventFactory(
             title="Afternoon Sync",
-            start=today.replace(hour=14),
-            end=today.replace(hour=15),
+            start=today.replace(hour=23, minute=30),
+            end=today.replace(hour=23, minute=59),
         )
         # Event from yesterday -- should not appear
         yesterday = today - timedelta(days=1)

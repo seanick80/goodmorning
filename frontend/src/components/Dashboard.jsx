@@ -23,10 +23,33 @@ function getDashboardFlashDuration(dashboard) {
   return widget?.settings?.dashboard_flash_seconds ?? 15;
 }
 
+const WIDGET_MAP = {
+  clock: ClockWidget,
+  weather: WeatherWidget,
+  glucose: GlucoseWidget,
+  stocks: StocksWidget,
+  calendar: CalendarWidget,
+  news: NewsWidget,
+};
+
+const DEFAULT_PANEL = {
+  clock: "left",
+  weather: "left",
+  glucose: "right",
+  stocks: "right",
+  calendar: "right",
+  news: "right",
+  photos: "right",
+};
+
+function getWidgetsForPanel(widgetLayout, panel) {
+  return (widgetLayout || [])
+    .filter((w) => w.enabled !== false && (w.panel || DEFAULT_PANEL[w.widget]) === panel)
+    .sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+}
+
 export default function Dashboard() {
   const { data: dashboard } = useDashboard();
-  const clockWidget = dashboard?.widget_layout?.find((w) => w.widget === "clock");
-  const clockSettings = clockWidget?.settings ?? undefined;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [photoFrameMode, setPhotoFrameMode] = useState(false);
   const [dashboardFlash, setDashboardFlash] = useState(false);
@@ -95,15 +118,21 @@ export default function Dashboard() {
 
         <div className={styles.hero}>
           <div className={styles.leftPanel}>
-            <ClockWidget settings={clockSettings} />
-            <WeatherWidget />
+            {getWidgetsForPanel(dashboard?.widget_layout, "left").map((w) => {
+              const Component = WIDGET_MAP[w.widget];
+              if (!Component) return null;
+              const props = w.widget === "clock" ? { settings: w.settings } : {};
+              return <Component key={w.widget} {...props} />;
+            })}
           </div>
 
           <div className={styles.rightPanel}>
-            <GlucoseWidget />
-            <StocksWidget />
-            <CalendarWidget />
-            <NewsWidget />
+            {getWidgetsForPanel(dashboard?.widget_layout, "right").map((w) => {
+              const Component = WIDGET_MAP[w.widget];
+              if (!Component) return null;
+              const props = w.widget === "clock" ? { settings: w.settings } : {};
+              return <Component key={w.widget} {...props} />;
+            })}
           </div>
         </div>
       </div>
