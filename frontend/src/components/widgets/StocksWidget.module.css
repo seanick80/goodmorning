@@ -1,6 +1,6 @@
 .loading,
 .error {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-faint);
   font-size: 0.95rem;
   padding: 1rem 0;
 }
@@ -10,7 +10,7 @@
   justify-content: space-between;
   align-items: center;
   padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--divider-subtle);
   text-decoration: none;
   transition: background 0.15s;
   margin: 0 -0.5rem;
@@ -35,7 +35,7 @@
 
 .price {
   font-size: 0.9rem;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-primary);
   flex: 1;
   text-align: right;
   margin-right: 0.75rem;
@@ -49,9 +49,9 @@
 }
 
 .up {
-  color: #4ade80;
+  color: var(--accent-green);
 }
 
 .down {
-  color: #f87171;
+  color: var(--accent-red);
 }

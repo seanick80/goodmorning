@@ -1,18 +1,18 @@
 .clock {
   text-align: center;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--card-bg);
   border-radius: 16px;
   padding: 1.5rem;
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(8px);
-  color: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 2px 16px var(--card-shadow);
+  border: 1px solid var(--card-border);
+  backdrop-filter: blur(var(--card-blur));
+  color: var(--text-primary);
 }
 
 .greeting {
   font-size: 1.6rem;
   font-weight: 300;
-  color: #f0a050;
+  color: var(--accent-greeting);
   margin-bottom: 0.25rem;
 }
 
@@ -26,24 +26,24 @@
 }
 
 .primaryLabel {
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-tertiary);
   margin-top: 0.5rem;
 }
 
 .date {
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   font-weight: 400;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-tertiary);
   margin-top: 0.25rem;
 }
 
 .divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--divider);
   margin: 1.25rem 2rem;
 }
 
@@ -58,17 +58,17 @@
 }
 
 .auxLabel {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.15em;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-tertiary);
   margin-bottom: 0.25rem;
 }
 
 .auxTime {
   font-size: 1.75rem;
   font-weight: 300;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }

@@ -10,7 +10,7 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-secondary);
 }
 
 .columns {
@@ -123,7 +123,7 @@
 }
 
 .toggle input:checked + .toggleSlider {
-  background: #7c6ef0;
+  background: var(--accent-purple);
 }
 
 .toggle input:checked + .toggleSlider::before {
@@ -163,12 +163,12 @@
 
 .success {
   font-size: 0.85rem;
-  color: #7c6ef0;
+  color: var(--accent-purple);
   margin: 0.5rem 0 0;
 }
 
 .errorText {
   font-size: 0.85rem;
-  color: #e06b6b;
+  color: var(--accent-red);
   margin: 0.5rem 0 0;
 }

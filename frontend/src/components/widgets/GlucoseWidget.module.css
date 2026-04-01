@@ -1,6 +1,6 @@
 .loading,
 .error {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-faint);
   font-size: 0.95rem;
   padding: 1rem 0;
 }
@@ -19,7 +19,7 @@
 
 .unit {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
 }
 
 .trend {
@@ -28,20 +28,20 @@
 }
 
 .inRange {
-  color: #4ade80;
+  color: var(--accent-green);
 }
 
 .highRange {
-  color: #facc15;
+  color: var(--accent-yellow);
 }
 
 .urgentRange {
-  color: #f87171;
+  color: var(--accent-red);
 }
 
 .stale {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-faint);
   margin-top: 0.25rem;
 }
 
@@ -63,6 +63,6 @@
 
 .timestamp {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-faint);
   margin-top: 0.25rem;
 }

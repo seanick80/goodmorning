@@ -46,7 +46,7 @@
 .closeButton {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   font-size: 1.1rem;
   cursor: pointer;
   padding: 0.25rem;
@@ -55,7 +55,7 @@
 }
 
 .closeButton:hover {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-primary);
 }
 
 .section {
@@ -74,7 +74,7 @@
   font-weight: 500;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-secondary);
 }
 
 .actionButton {
@@ -126,13 +126,13 @@
 
 .success {
   font-size: 0.85rem;
-  color: #7c6ef0;
+  color: var(--accent-purple);
   margin: 0.25rem 0 0.5rem;
 }
 
 .errorText {
   font-size: 0.85rem;
-  color: #e06b6b;
+  color: var(--accent-red);
   margin: 0.25rem 0 0.5rem;
 }
 
@@ -147,7 +147,7 @@
 
 .slider {
   width: 100%;
-  accent-color: #7c6ef0;
+  accent-color: var(--accent-purple);
 }
 
 .textInput {

@@ -16,7 +16,7 @@
 .settingsButton {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-faint);
   font-size: 1.3rem;
   cursor: pointer;
   padding: 0.2rem;
@@ -25,7 +25,7 @@
 }
 
 .settingsButton:hover {
-  color: rgba(255, 255, 255, 0.75);
+  color: var(--text-secondary);
 }
 
 .hero {
@@ -97,9 +97,9 @@
   bottom: 1.5rem;
   right: 1.5rem;
   z-index: 10;
-  background: rgba(0, 0, 0, 0.25);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.3);
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  color: var(--text-faint);
   font-size: 1rem;
   width: 2.5rem;
   height: 2.5rem;

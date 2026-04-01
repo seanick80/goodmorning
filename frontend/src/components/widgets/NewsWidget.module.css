@@ -1,7 +1,7 @@
 .loading,
 .error,
 .empty {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-faint);
   font-size: 0.95rem;
   padding: 1rem 0;
 }
@@ -21,14 +21,14 @@
 
 .title {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
   line-height: 1.4;
   margin-bottom: 0.35rem;
 }
 
 .titleLink {
   font-size: 1rem;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
   line-height: 1.4;
   margin-bottom: 0.35rem;
   display: block;
@@ -42,13 +42,13 @@
 }
 
 .meta {
-  font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.8rem;
+  color: var(--text-faint);
 }
 
 .source {
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
 }
 
 .nav {
@@ -63,7 +63,7 @@
   background: none;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 4px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   font-size: 1.2rem;
   line-height: 1;
   padding: 0.15rem 0.5rem;
@@ -72,12 +72,12 @@
 }
 
 .navBtn:hover {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-primary);
   border-color: rgba(255, 255, 255, 0.4);
 }
 
 .counter {
   font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-faint);
   font-variant-numeric: tabular-nums;
 }

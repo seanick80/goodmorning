@@ -1,7 +1,7 @@
 .loading,
 .error,
 .empty {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-faint);
   font-size: 0.95rem;
   padding: 1rem 0;
 }
@@ -11,7 +11,7 @@
   flex-direction: column;
   gap: 0.15rem;
   padding: 0.5rem 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  border-bottom: 1px solid var(--divider-subtle);
   text-decoration: none;
   transition: background 0.15s;
   margin: 0 -0.5rem;
@@ -30,7 +30,7 @@
 
 .time {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-tertiary);
   font-variant-numeric: tabular-nums;
 }
 
@@ -41,14 +41,14 @@
 
 .location {
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-faint);
 }
 
 /* Gear button */
 .gearButton {
   background: none;
   border: none;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-faint);
   font-size: 1rem;
   cursor: pointer;
   padding: 0 0.25rem;
@@ -58,7 +58,7 @@
 }
 
 .gearButton:hover {
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--text-secondary);
 }
 
 /* Configure panel */
@@ -85,11 +85,11 @@
   gap: 0.5rem;
   cursor: pointer;
   font-size: 0.85rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: var(--text-primary);
 }
 
 .checkbox {
-  accent-color: #7c6ef0;
+  accent-color: var(--accent-purple);
   cursor: pointer;
 }
 
@@ -108,7 +108,7 @@
 }
 
 .primaryBadge {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--text-faint);
   font-size: 0.75rem;
 }
 
@@ -123,7 +123,7 @@
   font-size: 0.8rem;
   font-weight: 500;
   color: #fff;
-  background: #7c6ef0;
+  background: var(--accent-purple);
   border: none;
   border-radius: 6px;
   cursor: pointer;
@@ -132,7 +132,7 @@
 }
 
 .saveButton:hover {
-  background: #6b5de0;
+  background: var(--accent-purple-hover);
 }
 
 .saveButton:disabled {
@@ -143,7 +143,7 @@
 .cancelButton {
   padding: 0.35rem 0.9rem;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-tertiary);
   background: none;
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 6px;
@@ -153,7 +153,7 @@
 }
 
 .cancelButton:hover {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-primary);
   border-color: rgba(255, 255, 255, 0.3);
 }
 
@@ -161,18 +161,18 @@
   font-size: 0.7rem;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-faint);
   padding: 0.5rem 0 0.15rem;
   margin-top: 0.25rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--divider);
 }
 
 .tomorrow .title {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--text-tertiary);
 }
 
 .tomorrow .time {
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--text-faint);
 }
 
 .connectLink {
