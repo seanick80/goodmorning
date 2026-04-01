@@ -4,6 +4,7 @@ import {
   DndContext,
   closestCorners,
   PointerSensor,
+  TouchSensor,
   useSensor,
   useSensors,
 } from "@dnd-kit/core";
@@ -112,8 +113,10 @@ function SortableWidgetCard({ id, enabled, onToggle }) {
       ref={setNodeRef}
       style={style}
       className={`${styles.widgetCard} ${!enabled ? styles.disabled : ""}`}
+      {...attributes}
+      {...listeners}
     >
-      <span {...attributes} {...listeners} className={styles.dragHandle}>
+      <span className={styles.dragHandle}>
         {"\u2630"}
       </span>
       <span className={styles.widgetName}>{WIDGET_NAMES[id]}</span>
@@ -147,7 +150,8 @@ export default function LayoutEditor() {
   const [saveStatus, setSaveStatus] = useState(null);
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 150, tolerance: 10 } })
   );
 
   const handleToggle = useCallback((id) => {

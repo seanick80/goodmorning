@@ -129,10 +129,53 @@ class CalendarView(APIView):
 
 
 class NewsView(APIView):
-    """GET /api/news/ -- returns recent news headlines (max 20)."""
+    """GET /api/news/ -- returns recent news headlines, respecting config."""
 
     def get(self, request):
-        headlines = NewsHeadline.objects.all().order_by("-published_at")[:20]
+        max_headlines = 20
+        include_keywords: list[str] = []
+        exclude_keywords: list[str] = []
+
+        try:
+            user = User.objects.filter(is_superuser=True).first()
+            if user and hasattr(user, "dashboard"):
+                for widget in user.dashboard.widget_layout:
+                    if widget.get("widget") == "news":
+                        settings = widget.get("settings", {})
+                        max_headlines = min(
+                            settings.get("max_headlines", 20), 50,
+                        )
+                        include_keywords = [
+                            kw.lower()
+                            for kw in settings.get("include_keywords", [])
+                        ]
+                        exclude_keywords = [
+                            kw.lower()
+                            for kw in settings.get("exclude_keywords", [])
+                        ]
+                        break
+        except Exception:
+            pass
+
+        qs = NewsHeadline.objects.all().order_by("-published_at")
+
+        if include_keywords:
+            from django.db.models import Q
+
+            q = Q()
+            for kw in include_keywords:
+                q |= Q(title__icontains=kw) | Q(summary__icontains=kw)
+            qs = qs.filter(q)
+
+        if exclude_keywords:
+            from django.db.models import Q
+
+            q = Q()
+            for kw in exclude_keywords:
+                q |= Q(title__icontains=kw) | Q(summary__icontains=kw)
+            qs = qs.exclude(q)
+
+        headlines = qs[:max_headlines]
         serializer = NewsHeadlineSerializer(headlines, many=True)
         return Response(serializer.data)
 

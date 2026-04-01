@@ -18,11 +18,12 @@ function relativeTime(dateStr) {
   return `${diffDays}d ago`;
 }
 
-export default function NewsWidget() {
+export default function NewsWidget({ settings, kioskMode }) {
   const { data, isLoading, isError } = useNews();
   const [currentIndex, setCurrentIndex] = useState(0);
   const [visible, setVisible] = useState(true);
 
+  const rotationMs = (settings?.rotation_interval ?? 30) * 1000;
   const headlines = Array.isArray(data) ? data : [];
 
   useEffect(() => {
@@ -34,10 +35,10 @@ export default function NewsWidget() {
         setCurrentIndex((prev) => (prev + 1) % headlines.length);
         setVisible(true);
       }, 400);
-    }, 30000);
+    }, rotationMs);
 
     return () => clearInterval(id);
-  }, [headlines.length]);
+  }, [headlines.length, rotationMs]);
 
   if (isLoading) {
     return (
@@ -89,9 +90,10 @@ export default function NewsWidget() {
       <div className={`${styles.headline} ${visible ? styles.visible : styles.hidden}`}>
         {headline.link ? (
           <a
-            href={headline.link}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={kioskMode ? undefined : headline.link}
+            target={kioskMode ? undefined : "_blank"}
+            rel={kioskMode ? undefined : "noopener noreferrer"}
+            onClick={kioskMode ? (e) => e.preventDefault() : undefined}
             className={styles.titleLink}
           >
             {headline.title}

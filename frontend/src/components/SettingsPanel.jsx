@@ -572,7 +572,341 @@ function GoogleAccountSection() {
   );
 }
 
-export default function SettingsPanel({ onClose, photoFrameMode, onTogglePhotoFrame }) {
+function getNewsSettings(dashboard) {
+  if (!dashboard?.widget_layout) {
+    return { sources: [], include_keywords: [], exclude_keywords: [], rotation_interval: 30, max_headlines: 20 };
+  }
+  const widget = dashboard.widget_layout.find((w) => w.widget === "news");
+  if (!widget?.settings) {
+    return { sources: [], include_keywords: [], exclude_keywords: [], rotation_interval: 30, max_headlines: 20 };
+  }
+  return {
+    sources: widget.settings.sources || [],
+    include_keywords: widget.settings.include_keywords || [],
+    exclude_keywords: widget.settings.exclude_keywords || [],
+    rotation_interval: widget.settings.rotation_interval ?? 30,
+    max_headlines: widget.settings.max_headlines ?? 20,
+  };
+}
+
+function NewsSettings() {
+  const queryClient = useQueryClient();
+  const { data: dashboard } = useDashboard();
+  const saved = getNewsSettings(dashboard);
+  const [sources, setSources] = useState(saved.sources);
+  const [includeKw, setIncludeKw] = useState(saved.include_keywords);
+  const [excludeKw, setExcludeKw] = useState(saved.exclude_keywords);
+  const [rotationInterval, setRotationInterval] = useState(saved.rotation_interval);
+  const [maxHeadlines, setMaxHeadlines] = useState(saved.max_headlines);
+  const [newFeedName, setNewFeedName] = useState("");
+  const [newFeedUrl, setNewFeedUrl] = useState("");
+  const [newGoogleKeyword, setNewGoogleKeyword] = useState("");
+  const [newIncludeKw, setNewIncludeKw] = useState("");
+  const [newExcludeKw, setNewExcludeKw] = useState("");
+  const [saveStatus, setSaveStatus] = useState(null);
+
+  function saveNewsSettings(updates) {
+    const widgetLayout = dashboard?.widget_layout ?? [];
+    const newsWidget = widgetLayout.find((w) => w.widget === "news");
+    const currentSettings = newsWidget?.settings ?? {};
+    const updatedSettings = {
+      ...currentSettings,
+      sources: updates.sources ?? sources,
+      include_keywords: updates.include_keywords ?? includeKw,
+      exclude_keywords: updates.exclude_keywords ?? excludeKw,
+      rotation_interval: updates.rotation_interval ?? rotationInterval,
+      max_headlines: updates.max_headlines ?? maxHeadlines,
+    };
+    const updatedLayout = widgetLayout.map((w) =>
+      w.widget === "news" ? { ...w, settings: updatedSettings } : w
+    );
+    if (!newsWidget) {
+      updatedLayout.push({
+        widget: "news",
+        enabled: true,
+        position: updatedLayout.length,
+        panel: "right",
+        settings: updatedSettings,
+      });
+    }
+    patchDashboard({ widget_layout: updatedLayout }).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["news"] });
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus(null), 2000);
+    });
+  }
+
+  function handleAddFeed() {
+    const url = newFeedUrl.trim();
+    const name = newFeedName.trim();
+    if (!url) return;
+    const updated = [...sources, { name: name || url, url }];
+    setSources(updated);
+    setNewFeedName("");
+    setNewFeedUrl("");
+    saveNewsSettings({ sources: updated });
+  }
+
+  function handleAddGoogleNews() {
+    const keyword = newGoogleKeyword.trim();
+    if (!keyword) return;
+    const url = `https://news.google.com/rss/search?q=${encodeURIComponent(keyword)}&hl=en-US&gl=US&ceid=US:en`;
+    const updated = [
+      ...sources,
+      { name: `Google News: ${keyword}`, url, type: "google_news", keyword },
+    ];
+    setSources(updated);
+    setNewGoogleKeyword("");
+    saveNewsSettings({ sources: updated });
+  }
+
+  function handleRemoveSource(index) {
+    const updated = sources.filter((_, i) => i !== index);
+    setSources(updated);
+    saveNewsSettings({ sources: updated });
+  }
+
+  function handleAddIncludeKw() {
+    const kw = newIncludeKw.trim().toLowerCase();
+    if (!kw || includeKw.includes(kw)) return;
+    const updated = [...includeKw, kw];
+    setIncludeKw(updated);
+    setNewIncludeKw("");
+    saveNewsSettings({ include_keywords: updated });
+  }
+
+  function handleRemoveIncludeKw(index) {
+    const updated = includeKw.filter((_, i) => i !== index);
+    setIncludeKw(updated);
+    saveNewsSettings({ include_keywords: updated });
+  }
+
+  function handleAddExcludeKw() {
+    const kw = newExcludeKw.trim().toLowerCase();
+    if (!kw || excludeKw.includes(kw)) return;
+    const updated = [...excludeKw, kw];
+    setExcludeKw(updated);
+    setNewExcludeKw("");
+    saveNewsSettings({ exclude_keywords: updated });
+  }
+
+  function handleRemoveExcludeKw(index) {
+    const updated = excludeKw.filter((_, i) => i !== index);
+    setExcludeKw(updated);
+    saveNewsSettings({ exclude_keywords: updated });
+  }
+
+  function handleRotationChange(e) {
+    const val = Number(e.target.value);
+    setRotationInterval(val);
+    saveNewsSettings({ rotation_interval: val });
+  }
+
+  function handleMaxHeadlinesChange(e) {
+    const val = Number(e.target.value);
+    setMaxHeadlines(val);
+    saveNewsSettings({ max_headlines: val });
+  }
+
+  return (
+    <div className={styles.section}>
+      <h3 className={styles.sectionTitle}>News Feeds</h3>
+
+      {sources.length > 0 && (
+        <div className={styles.newsList}>
+          {sources.map((source, i) => (
+            <div key={i} className={styles.newsSourceRow}>
+              <div className={styles.newsSourceInfo}>
+                <span className={styles.newsSourceName}>{source.name}</span>
+                {source.type === "google_news" && (
+                  <span className={styles.newsSourceBadge}>Google News</span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => handleRemoveSource(i)}
+                className={styles.removeButton}
+                title="Remove"
+              >
+                {"\u2715"}
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className={styles.newsAddSection}>
+        <span className={styles.newsAddLabel}>Add RSS feed</span>
+        <input
+          type="text"
+          value={newFeedName}
+          onChange={(e) => setNewFeedName(e.target.value)}
+          className={styles.textInput}
+          placeholder="Feed name (optional)"
+        />
+        <div className={styles.newsAddRow}>
+          <input
+            type="url"
+            value={newFeedUrl}
+            onChange={(e) => setNewFeedUrl(e.target.value)}
+            className={styles.textInput}
+            placeholder="https://example.com/rss.xml"
+            onKeyDown={(e) => e.key === "Enter" && handleAddFeed()}
+          />
+          <button
+            type="button"
+            onClick={handleAddFeed}
+            className={styles.actionButton}
+            disabled={!newFeedUrl.trim()}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.newsAddSection}>
+        <span className={styles.newsAddLabel}>Add Google News search</span>
+        <div className={styles.newsAddRow}>
+          <input
+            type="text"
+            value={newGoogleKeyword}
+            onChange={(e) => setNewGoogleKeyword(e.target.value)}
+            className={styles.textInput}
+            placeholder='Keyword (e.g. "artificial intelligence")'
+            onKeyDown={(e) => e.key === "Enter" && handleAddGoogleNews()}
+          />
+          <button
+            type="button"
+            onClick={handleAddGoogleNews}
+            className={styles.actionButton}
+            disabled={!newGoogleKeyword.trim()}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.newsAddSection}>
+        <span className={styles.newsAddLabel}>Include keywords (show only matching)</span>
+        <div className={styles.newsKeywordList}>
+          {includeKw.map((kw, i) => (
+            <span key={i} className={styles.newsKeywordTag}>
+              {kw}
+              <button
+                type="button"
+                onClick={() => handleRemoveIncludeKw(i)}
+                className={styles.newsKeywordRemove}
+              >
+                {"\u2715"}
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className={styles.newsAddRow}>
+          <input
+            type="text"
+            value={newIncludeKw}
+            onChange={(e) => setNewIncludeKw(e.target.value)}
+            className={styles.textInput}
+            placeholder="Add keyword..."
+            onKeyDown={(e) => e.key === "Enter" && handleAddIncludeKw()}
+          />
+          <button
+            type="button"
+            onClick={handleAddIncludeKw}
+            className={styles.actionButton}
+            disabled={!newIncludeKw.trim()}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      <div className={styles.newsAddSection}>
+        <span className={styles.newsAddLabel}>Exclude keywords (hide matching)</span>
+        <div className={styles.newsKeywordList}>
+          {excludeKw.map((kw, i) => (
+            <span key={i} className={styles.newsKeywordTagExclude}>
+              {kw}
+              <button
+                type="button"
+                onClick={() => handleRemoveExcludeKw(i)}
+                className={styles.newsKeywordRemove}
+              >
+                {"\u2715"}
+              </button>
+            </span>
+          ))}
+        </div>
+        <div className={styles.newsAddRow}>
+          <input
+            type="text"
+            value={newExcludeKw}
+            onChange={(e) => setNewExcludeKw(e.target.value)}
+            className={styles.textInput}
+            placeholder="Add keyword..."
+            onKeyDown={(e) => e.key === "Enter" && handleAddExcludeKw()}
+          />
+          <button
+            type="button"
+            onClick={handleAddExcludeKw}
+            className={styles.actionButton}
+            disabled={!newExcludeKw.trim()}
+          >
+            Add
+          </button>
+        </div>
+      </div>
+
+      <label className={styles.sliderLabel}>
+        <span>Rotate every {rotationInterval}s</span>
+        <input
+          type="range"
+          min="5"
+          max="120"
+          step="5"
+          value={rotationInterval}
+          onChange={handleRotationChange}
+          className={styles.slider}
+        />
+      </label>
+
+      <label className={styles.sliderLabel}>
+        <span>Max headlines: {maxHeadlines}</span>
+        <input
+          type="range"
+          min="5"
+          max="50"
+          step="5"
+          value={maxHeadlines}
+          onChange={handleMaxHeadlinesChange}
+          className={styles.slider}
+        />
+      </label>
+
+      {saveStatus === "saved" && <p className={styles.success}>Saved!</p>}
+    </div>
+  );
+}
+
+function KioskModeSection({ kioskMode, onToggle }) {
+  return (
+    <div className={styles.section}>
+      <h3 className={styles.sectionTitle}>Kiosk Mode</h3>
+      <p className={styles.info}>
+        {kioskMode
+          ? "External links are disabled. Tapping widgets won\u2019t navigate away."
+          : "Tapping stocks, news, or calendar opens links in new tabs."}
+      </p>
+      <button type="button" onClick={onToggle} className={styles.actionButton}>
+        {kioskMode ? "Disable Kiosk Mode" : "Enable Kiosk Mode"}
+      </button>
+    </div>
+  );
+}
+
+export default function SettingsPanel({ onClose, photoFrameMode, onTogglePhotoFrame, kioskMode, onToggleKiosk }) {
   const { data: auth } = useAuth();
   const { data: dashboard } = useDashboard();
   const googleConnected = auth?.authenticated && auth?.google_connected;
@@ -593,7 +927,9 @@ export default function SettingsPanel({ onClose, photoFrameMode, onTogglePhotoFr
           </button>
         </div>
         <LayoutEditor />
+        <KioskModeSection kioskMode={kioskMode} onToggle={onToggleKiosk} />
         <ClockSettings />
+        <NewsSettings />
         <PhotoFrameSection
           photoFrameMode={photoFrameMode}
           onToggle={onTogglePhotoFrame}

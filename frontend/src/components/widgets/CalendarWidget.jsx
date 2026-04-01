@@ -146,7 +146,7 @@ function CalendarConfigure({ onClose }) {
   );
 }
 
-export default function CalendarWidget() {
+export default function CalendarWidget({ kioskMode }) {
   const [configOpen, setConfigOpen] = useState(false);
   const { data, isLoading, isError } = useCalendar();
 
@@ -224,9 +224,10 @@ export default function CalendarWidget() {
             <a
               key={i}
               className={`${styles.event} ${isTomorrow ? styles.tomorrow : ""}`}
-              href={calUrl ?? undefined}
-              target="_blank"
-              rel="noopener noreferrer"
+              href={kioskMode ? undefined : (calUrl ?? undefined)}
+              target={kioskMode ? undefined : "_blank"}
+              rel={kioskMode ? undefined : "noopener noreferrer"}
+              onClick={kioskMode ? (e) => e.preventDefault() : undefined}
             >
               <span className={styles.time}>
                 {event.all_day ? "All day" : `${formatTime(event.start)} – ${formatTime(event.end)}`}

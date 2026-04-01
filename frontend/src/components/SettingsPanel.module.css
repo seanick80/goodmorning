@@ -213,3 +213,113 @@ select.textInput option {
   gap: 0.5rem;
   margin-top: 0.25rem;
 }
+
+.newsList {
+  margin-bottom: 0.75rem;
+}
+
+.newsSourceRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.newsSourceInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+  flex: 1;
+}
+
+.newsSourceName {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.7);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.newsSourceBadge {
+  font-size: 0.6rem;
+  padding: 0.1rem 0.35rem;
+  border-radius: 3px;
+  background: rgba(124, 110, 240, 0.2);
+  color: rgba(124, 110, 240, 0.8);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.newsAddSection {
+  margin: 0.6rem 0;
+}
+
+.newsAddLabel {
+  display: block;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 0.3rem;
+}
+
+.newsAddRow {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  margin-top: 0.3rem;
+}
+
+.newsAddRow .textInput {
+  flex: 1;
+  min-width: 0;
+}
+
+.newsAddRow .actionButton {
+  flex-shrink: 0;
+}
+
+.newsKeywordList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin-bottom: 0.3rem;
+}
+
+.newsKeywordTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(100, 200, 120, 0.15);
+  color: rgba(100, 200, 120, 0.85);
+}
+
+.newsKeywordTagExclude {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(224, 107, 107, 0.15);
+  color: rgba(224, 107, 107, 0.85);
+}
+
+.newsKeywordRemove {
+  background: none;
+  border: none;
+  color: inherit;
+  font-size: 0.6rem;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+  opacity: 0.6;
+  transition: opacity 0.2s;
+}
+
+.newsKeywordRemove:hover {
+  opacity: 1;
+}

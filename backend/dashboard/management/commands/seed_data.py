@@ -53,6 +53,10 @@ DEFAULT_WIDGET_LAYOUT = [
             "sources": [
                 {"name": "BBC News", "url": "https://feeds.bbci.co.uk/news/rss.xml"},
                 {"name": "NPR", "url": "https://feeds.npr.org/1001/rss.xml"},
+                {"name": "Reuters", "url": "https://feeds.reuters.com/rss/topNews"},
+                {"name": "AP News", "url": "https://rsshub.app/apnews/topics/apf-topnews"},
+                {"name": "Ars Technica", "url": "https://feeds.arstechnica.com/arstechnica/index"},
+                {"name": "Hacker News", "url": "https://hnrss.org/frontpage"},
             ],
             "rotation_interval": 30,
             "max_headlines": 20,

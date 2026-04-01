@@ -310,6 +310,128 @@ class TestNewsView:
         assert response.status_code == 200
         assert len(response.json()) == 20
 
+    def test_respects_max_headlines_from_config(self, api_client):
+        from datetime import datetime, timedelta, timezone
+
+        user = UserFactory(is_superuser=True, username="admin")
+        UserDashboardFactory(
+            user=user,
+            widget_layout=[
+                {
+                    "widget": "news",
+                    "enabled": True,
+                    "position": 0,
+                    "settings": {"max_headlines": 5},
+                },
+            ],
+        )
+        base_time = datetime(2026, 3, 17, 8, 0, tzinfo=timezone.utc)
+        for i in range(10):
+            NewsHeadlineFactory(
+                published_at=base_time + timedelta(hours=i),
+            )
+
+        response = api_client.get("/api/news/")
+        assert response.status_code == 200
+        assert len(response.json()) == 5
+
+    def test_include_keywords_filter(self, api_client):
+        from datetime import datetime, timezone
+
+        user = UserFactory(is_superuser=True, username="admin")
+        UserDashboardFactory(
+            user=user,
+            widget_layout=[
+                {
+                    "widget": "news",
+                    "enabled": True,
+                    "position": 0,
+                    "settings": {"include_keywords": ["tech"]},
+                },
+            ],
+        )
+        NewsHeadlineFactory(
+            title="Tech stocks rally",
+            published_at=datetime(2026, 3, 17, 12, 0, tzinfo=timezone.utc),
+        )
+        NewsHeadlineFactory(
+            title="Sports update today",
+            published_at=datetime(2026, 3, 17, 11, 0, tzinfo=timezone.utc),
+        )
+
+        response = api_client.get("/api/news/")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["title"] == "Tech stocks rally"
+
+    def test_exclude_keywords_filter(self, api_client):
+        from datetime import datetime, timezone
+
+        user = UserFactory(is_superuser=True, username="admin")
+        UserDashboardFactory(
+            user=user,
+            widget_layout=[
+                {
+                    "widget": "news",
+                    "enabled": True,
+                    "position": 0,
+                    "settings": {"exclude_keywords": ["sports"]},
+                },
+            ],
+        )
+        NewsHeadlineFactory(
+            title="Tech stocks rally",
+            published_at=datetime(2026, 3, 17, 12, 0, tzinfo=timezone.utc),
+        )
+        NewsHeadlineFactory(
+            title="Sports update today",
+            published_at=datetime(2026, 3, 17, 11, 0, tzinfo=timezone.utc),
+        )
+
+        response = api_client.get("/api/news/")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["title"] == "Tech stocks rally"
+
+    def test_include_and_exclude_keywords_combined(self, api_client):
+        from datetime import datetime, timezone
+
+        user = UserFactory(is_superuser=True, username="admin")
+        UserDashboardFactory(
+            user=user,
+            widget_layout=[
+                {
+                    "widget": "news",
+                    "enabled": True,
+                    "position": 0,
+                    "settings": {
+                        "include_keywords": ["market"],
+                        "exclude_keywords": ["crypto"],
+                    },
+                },
+            ],
+        )
+        NewsHeadlineFactory(
+            title="Stock market surges",
+            published_at=datetime(2026, 3, 17, 12, 0, tzinfo=timezone.utc),
+        )
+        NewsHeadlineFactory(
+            title="Crypto market crash",
+            published_at=datetime(2026, 3, 17, 11, 0, tzinfo=timezone.utc),
+        )
+        NewsHeadlineFactory(
+            title="Weather report",
+            published_at=datetime(2026, 3, 17, 10, 0, tzinfo=timezone.utc),
+        )
+
+        response = api_client.get("/api/news/")
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data) == 1
+        assert data[0]["title"] == "Stock market surges"
+
 
 @pytest.mark.django_db()
 class TestCORSConfiguration:

@@ -52,6 +52,16 @@ export default function Dashboard() {
   const { data: dashboard } = useDashboard();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [photoFrameMode, setPhotoFrameMode] = useState(false);
+  const [kioskMode, setKioskMode] = useState(
+    () => localStorage.getItem("kiosk_mode") === "true"
+  );
+
+  const handleToggleKiosk = useCallback(() => {
+    setKioskMode((v) => {
+      localStorage.setItem("kiosk_mode", String(!v));
+      return !v;
+    });
+  }, []);
   const [dashboardFlash, setDashboardFlash] = useState(false);
   const tickRef = useRef(0);
   const flashTimerRef = useRef(null);
@@ -121,8 +131,8 @@ export default function Dashboard() {
             {getWidgetsForPanel(dashboard?.widget_layout, "left").map((w) => {
               const Component = WIDGET_MAP[w.widget];
               if (!Component) return null;
-              const props = w.widget === "clock" ? { settings: w.settings } : {};
-              return <Component key={w.widget} {...props} />;
+              const props = (w.widget === "clock" || w.widget === "news") ? { settings: w.settings } : {};
+              return <Component key={w.widget} {...props} kioskMode={kioskMode} />;
             })}
           </div>
 
@@ -130,8 +140,8 @@ export default function Dashboard() {
             {getWidgetsForPanel(dashboard?.widget_layout, "right").map((w) => {
               const Component = WIDGET_MAP[w.widget];
               if (!Component) return null;
-              const props = w.widget === "clock" ? { settings: w.settings } : {};
-              return <Component key={w.widget} {...props} />;
+              const props = (w.widget === "clock" || w.widget === "news") ? { settings: w.settings } : {};
+              return <Component key={w.widget} {...props} kioskMode={kioskMode} />;
             })}
           </div>
         </div>
@@ -142,6 +152,8 @@ export default function Dashboard() {
           onClose={() => setSettingsOpen(false)}
           photoFrameMode={photoFrameMode}
           onTogglePhotoFrame={handleTogglePhotoFrame}
+          kioskMode={kioskMode}
+          onToggleKiosk={handleToggleKiosk}
         />
       )}
     </div>

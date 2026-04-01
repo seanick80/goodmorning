@@ -3,7 +3,7 @@ import StaleIndicator from "../StaleIndicator";
 import WidgetCard from "../WidgetCard";
 import styles from "./StocksWidget.module.css";
 
-export default function StocksWidget() {
+export default function StocksWidget({ kioskMode }) {
   const { data, isLoading, isError } = useStocks();
 
   if (isLoading) {
@@ -33,9 +33,10 @@ export default function StocksWidget() {
           <a
             key={stock.symbol}
             className={styles.row}
-            href={`https://www.google.com/finance/quote/${stock.symbol}:NASDAQ`}
-            target="_blank"
-            rel="noopener noreferrer"
+            href={kioskMode ? undefined : `https://www.google.com/finance/quote/${stock.symbol}:NASDAQ`}
+            target={kioskMode ? undefined : "_blank"}
+            rel={kioskMode ? undefined : "noopener noreferrer"}
+            onClick={kioskMode ? (e) => e.preventDefault() : undefined}
           >
             <span className={styles.symbol}>{stock.symbol}</span>
             <span className={styles.price}>

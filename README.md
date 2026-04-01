@@ -20,7 +20,7 @@ A full-stack web dashboard designed for a tablet display in a living room. Shows
 | Weather | Open-Meteo API (no key required) | Every 15 minutes |
 | Stocks | Finnhub API (free tier) | Every 5 minutes |
 | Calendar | Google Calendar API (OAuth) | Every 30 minutes |
-| News | RSS feeds (BBC, NPR, Reuters) | Every 60 minutes |
+| News | RSS feeds (BBC, NPR, Reuters, AP, Ars Technica, Hacker News) | Every 60 minutes |
 | Photos | Google Photos Picker API | Configurable (15-300s) |
 | Glucose | Dexcom Share API (CGM) | Every 5 minutes |
 
@@ -30,11 +30,15 @@ Uses a **Hero layout** (60/40 split):
 - **Left panel (default):** Clock (multi-timezone: primary + 0-3 configurable aux) and Weather
 - **Right panel:** Glucose, Stocks, Calendar, and News stacked vertically
 
-Widget layout is fully configurable — drag-and-drop widgets between panels, reorder, enable/disable via the Settings panel.
+Widget layout is fully configurable — drag-and-drop widgets between panels, reorder, enable/disable via the Settings panel. Touch-friendly drag targets for touchscreen use.
 
 Background photo slideshow from Google Photos with configurable crossfade interval.
 
 **Photo Frame Mode:** Fullscreen photo slideshow with optional dashboard flash — the dashboard appears as a "slide" every N photos for a configurable duration, then fades back to photos.
+
+**Kiosk Mode:** Disables external links so tapping stocks, news, or calendar won't navigate away from the dashboard. Ideal for always-on touchscreen displays.
+
+**News Trawler:** Configurable RSS feeds with Google News keyword search, include/exclude keyword filters, adjustable rotation interval and max headlines — all managed from the Settings panel.
 
 ## Quick Start
 
@@ -97,12 +101,12 @@ After startup:
 
 ### Run Tests
 ```bash
-# Backend (133 tests) — requires PostgreSQL running
+# Backend (137 tests) — requires PostgreSQL running
 cd backend
 source .venv/Scripts/activate
 python -m pytest -v
 
-# Frontend (22 tests)
+# Frontend (23 tests)
 cd frontend
 npm test
 ```
@@ -168,7 +172,7 @@ goodmorning/
         run_scheduler.py    # APScheduler management command
         seed_data.py        # Dev data seeder
         setup_google_oauth.py  # Google OAuth bootstrap
-      tests/                # pytest + factory_boy (128 tests)
+      tests/                # pytest + factory_boy (137 tests)
     manage.py
   frontend/
     src/
@@ -178,7 +182,8 @@ goodmorning/
       components/
         Dashboard.jsx       # Main Hero layout (60/40 split)
         BackgroundSlideshow.jsx  # Google Photos crossfade slideshow
-        SettingsPanel.jsx   # Settings (clock, photos, glucose, Google account)
+        SettingsPanel.jsx   # Settings (layout, kiosk mode, clock, news,
+                            #   photos, glucose, Google account)
         AuthStatus.jsx      # Google OAuth status indicator
         WidgetCard.jsx      # Shared glass-morphism card wrapper
         StaleIndicator.tsx  # Data freshness warning icon
@@ -204,10 +209,19 @@ goodmorning/
 |--------|----------|--------|
 | Local Windows + Docker | PostgreSQL 16 | Working |
 | Raspberry Pi | PostgreSQL 16 (native) | Working |
+| Raspberry Pi + DSI Touchscreen | PostgreSQL 16 (native) | Working |
+
+### Touchscreen / Kiosk Notes
+
+For Raspberry Pi with a DSI touchscreen (e.g., Goodix capacitive):
+- Display rotation via kanshi (`transform 270` for landscape)
+- Touch-to-output mapping via labwc `rc.xml` (`mapToOutput="DSI-2"`)
+- Enable **Kiosk Mode** in Settings to prevent link navigation
+- Compact layout auto-applies at 1280x720 (reduced padding, larger fonts)
 
 ## Future Work
 
-- Configurable news feeds and keyword filtering
 - Privacy Policy page (needed for Google verification)
+- In-dashboard detail view (iframe or panel) for stocks/news instead of external links
 - PWA support (tablet home screen install)
 - Theme customization (dark/light modes)
