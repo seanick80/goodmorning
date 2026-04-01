@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 from dashboard.models import (
     CalendarEvent,
@@ -149,16 +149,7 @@ def fetch_google_calendar() -> None:
             events = fetch_google_calendar_events(google_user, calendar_ids)
 
             source_key = f"google:{google_user.id}"
-            today_start = datetime.combine(
-                date.today(), datetime.min.time(), tzinfo=timezone.utc,
-            )
-            today_end = today_start + timedelta(days=1)
-
-            CalendarEvent.objects.filter(
-                source_url=source_key,
-                start__gte=today_start,
-                start__lt=today_end,
-            ).delete()
+            CalendarEvent.objects.filter(source_url=source_key).delete()
 
             for event_data in events:
                 CalendarEvent.objects.create(
