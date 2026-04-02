@@ -13,6 +13,7 @@ urlpatterns = [
     path("geocode/", views.GeocodeView.as_view(), name="geocode"),
     path("weather/location/", views.WeatherLocationView.as_view(), name="weather-location"),
     path("glucose/", views.GlucoseView.as_view(), name="glucose"),
+    path("word-of-the-day/", views.WordOfTheDayView.as_view(), name="word-of-the-day"),
     # Auth
     path("auth/status/", views.AuthStatusView.as_view(), name="auth-status"),
     path("auth/google/calendars/", views.GoogleCalendarListView.as_view(), name="google-calendars"),

@@ -71,7 +71,7 @@ class GlucoseReadingSerializer(serializers.ModelSerializer):
         ]
 
 
-ALLOWED_WIDGETS = {"clock", "weather", "stocks", "calendar", "news", "photos", "glucose"}
+ALLOWED_WIDGETS = {"clock", "weather", "stocks", "calendar", "news", "photos", "glucose", "wordoftheday"}
 ALLOWED_PANELS = {"left", "right"}
 
 

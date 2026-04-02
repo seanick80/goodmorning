@@ -572,6 +572,97 @@ function GoogleAccountSection() {
   );
 }
 
+function getWordSettings(dashboard) {
+  if (!dashboard?.widget_layout) return { grade_level: 1, start_date: "" };
+  const widget = dashboard.widget_layout.find((w) => w.widget === "wordoftheday");
+  if (!widget?.settings) return { grade_level: 1, start_date: "" };
+  return {
+    grade_level: widget.settings.grade_level ?? 1,
+    start_date: widget.settings.start_date ?? "",
+  };
+}
+
+function WordOfTheDaySettings() {
+  const queryClient = useQueryClient();
+  const { data: dashboard } = useDashboard();
+  const saved = getWordSettings(dashboard);
+  const [gradeLevel, setGradeLevel] = useState(saved.grade_level);
+  const [startDate, setStartDate] = useState(saved.start_date);
+  const [saveStatus, setSaveStatus] = useState(null);
+
+  function saveSettings(updates) {
+    const widgetLayout = dashboard?.widget_layout ?? [];
+    const widget = widgetLayout.find((w) => w.widget === "wordoftheday");
+    const currentSettings = widget?.settings ?? {};
+    const updatedSettings = {
+      ...currentSettings,
+      grade_level: updates.grade_level ?? gradeLevel,
+      start_date: updates.start_date ?? startDate,
+    };
+    const updatedLayout = widgetLayout.map((w) =>
+      w.widget === "wordoftheday" ? { ...w, settings: updatedSettings } : w
+    );
+    if (!widget) {
+      updatedLayout.push({
+        widget: "wordoftheday",
+        enabled: true,
+        position: updatedLayout.length,
+        panel: "left",
+        settings: updatedSettings,
+      });
+    }
+    patchDashboard({ widget_layout: updatedLayout }).then(() => {
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+      queryClient.invalidateQueries({ queryKey: ["wordoftheday"] });
+      setSaveStatus("saved");
+      setTimeout(() => setSaveStatus(null), 2000);
+    });
+  }
+
+  function handleGradeChange(e) {
+    const val = Number(e.target.value);
+    setGradeLevel(val);
+    saveSettings({ grade_level: val });
+  }
+
+  function handleStartDateChange(e) {
+    const val = e.target.value;
+    setStartDate(val);
+    saveSettings({ start_date: val });
+  }
+
+  return (
+    <div className={styles.section}>
+      <h3 className={styles.sectionTitle}>Word of the Day</h3>
+      <label className={styles.sliderLabel}>
+        <span>Grade Level</span>
+        <select
+          value={gradeLevel}
+          onChange={handleGradeChange}
+          className={styles.textInput}
+        >
+          <option value={1}>Grade 1</option>
+          <option value={2}>Grade 2</option>
+          <option value={3}>Grade 3</option>
+        </select>
+      </label>
+      <label className={styles.sliderLabel}>
+        <span>Start date (week 1 begins here)</span>
+        <input
+          type="date"
+          value={startDate}
+          onChange={handleStartDateChange}
+          className={styles.textInput}
+        />
+      </label>
+      <p className={styles.info}>
+        Leave blank to start from January of this year.
+      </p>
+      {saveStatus === "saved" && <p className={styles.success}>Saved!</p>}
+    </div>
+  );
+}
+
 function getNewsSettings(dashboard) {
   if (!dashboard?.widget_layout) {
     return { sources: [], include_keywords: [], exclude_keywords: [], rotation_interval: 30, max_headlines: 20 };
@@ -929,6 +1020,7 @@ export default function SettingsPanel({ onClose, photoFrameMode, onTogglePhotoFr
         <LayoutEditor />
         <KioskModeSection kioskMode={kioskMode} onToggle={onToggleKiosk} />
         <ClockSettings />
+        <WordOfTheDaySettings />
         <NewsSettings />
         <PhotoFrameSection
           photoFrameMode={photoFrameMode}

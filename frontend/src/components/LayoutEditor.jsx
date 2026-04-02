@@ -27,11 +27,12 @@ const WIDGET_NAMES = {
   calendar: "Calendar",
   news: "News",
   glucose: "Glucose",
+  wordoftheday: "Word of the Day",
   photos: "Photos",
 };
 
 const DEFAULT_PANELS = {
-  left: ["clock", "weather"],
+  left: ["clock", "weather", "wordoftheday"],
   right: ["glucose", "stocks", "calendar", "news"],
 };
 
@@ -49,6 +50,7 @@ function buildPanelsFromLayout(widgetLayout) {
     stocks: "right",
     calendar: "right",
     news: "right",
+    wordoftheday: "left",
     photos: "right",
   };
 

@@ -1,0 +1,49 @@
+.word {
+  font-size: 3.2rem;
+  font-weight: 700;
+  color: #fff;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.highlight {
+  text-decoration: underline;
+  text-decoration-color: var(--accent-purple);
+  text-decoration-thickness: 3px;
+  text-underline-offset: 4px;
+}
+
+.pattern {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  text-align: center;
+  margin-top: 0.5rem;
+}
+
+.dots {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+}
+
+.dotActive {
+  background: var(--accent-purple);
+}
+
+.dotCurrent {
+  background: var(--accent-green);
+}
+
+.loading,
+.error {
+  color: var(--text-faint);
+  font-size: 0.95rem;
+}

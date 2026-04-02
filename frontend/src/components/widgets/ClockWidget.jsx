@@ -29,7 +29,6 @@ function formatTime(date, timezone, hour12) {
   return new Intl.DateTimeFormat("en-US", {
     hour: "numeric",
     minute: "2-digit",
-    second: "2-digit",
     hour12,
     timeZone: timezone,
   }).format(date);

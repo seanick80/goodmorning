@@ -506,6 +506,86 @@ class PhotosPickerMediaView(APIView):
             )
 
 
+class WordOfTheDayView(APIView):
+    """GET /api/word-of-the-day/ -- returns today's word based on grade and start date."""
+
+    def get(self, request: object) -> Response:
+        import json
+        from pathlib import Path
+
+        user = User.objects.filter(is_superuser=True).first()
+        if not user or not hasattr(user, "dashboard"):
+            return Response(
+                {"detail": "No dashboard configured."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Read settings from widget_layout
+        grade_level = 1
+        start_date_str = None
+        for widget in user.dashboard.widget_layout:
+            if widget.get("widget") == "wordoftheday":
+                settings = widget.get("settings", {})
+                grade_level = settings.get("grade_level", 1)
+                start_date_str = settings.get("start_date")
+                break
+
+        # Load word families data
+        data_path = Path(__file__).parent / "data" / "word_families.json"
+        with open(data_path) as f:
+            word_data = json.load(f)
+
+        grade_key = f"grade_{grade_level}"
+        weeks = word_data.get(grade_key, [])
+        if not weeks:
+            return Response(
+                {"detail": f"No data for grade {grade_level}."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        today = date.today()
+        weekday = today.weekday()  # 0=Mon, 6=Sun
+
+        # Determine which week we're in
+        if start_date_str:
+            try:
+                start = date.fromisoformat(start_date_str)
+            except ValueError:
+                start = today
+        else:
+            # Default: week 1 starts on the first Monday of the current year
+            jan1 = date(today.year, 1, 1)
+            days_to_monday = (7 - jan1.weekday()) % 7
+            start = jan1 + timedelta(days=days_to_monday)
+
+        days_elapsed = (today - start).days
+        if days_elapsed < 0:
+            days_elapsed = 0
+
+        week_number = (days_elapsed // 7) % len(weeks)
+        week_data = weeks[week_number]
+
+        # Weekend: show Friday's word
+        if weekday >= 5:
+            day_index = 4
+            is_weekend = True
+        else:
+            day_index = weekday
+            is_weekend = False
+
+        word = week_data["words"][day_index]
+
+        return Response({
+            "word": word,
+            "pattern": week_data["pattern"],
+            "pattern_position": week_data.get("pattern_position", "end"),
+            "grade": grade_level,
+            "week_number": week_number + 1,
+            "day_index": day_index,
+            "is_weekend": is_weekend,
+        })
+
+
 class PhotoProxyView(APIView):
     """GET /api/photos/<index>/ -- proxy a cached Google Photos image.
 

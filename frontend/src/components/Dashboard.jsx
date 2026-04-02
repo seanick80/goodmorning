@@ -5,6 +5,7 @@ import GlucoseWidget from "./widgets/GlucoseWidget";
 import StocksWidget from "./widgets/StocksWidget";
 import CalendarWidget from "./widgets/CalendarWidget";
 import NewsWidget from "./widgets/NewsWidget";
+import WordOfTheDayWidget from "./widgets/WordOfTheDayWidget";
 import AuthStatus from "./AuthStatus";
 import SettingsPanel from "./SettingsPanel";
 import BackgroundSlideshow from "./BackgroundSlideshow";
@@ -30,6 +31,7 @@ const WIDGET_MAP = {
   stocks: StocksWidget,
   calendar: CalendarWidget,
   news: NewsWidget,
+  wordoftheday: WordOfTheDayWidget,
 };
 
 const DEFAULT_PANEL = {
@@ -39,6 +41,7 @@ const DEFAULT_PANEL = {
   stocks: "right",
   calendar: "right",
   news: "right",
+  wordoftheday: "left",
   photos: "right",
 };
 
@@ -131,7 +134,7 @@ export default function Dashboard() {
             {getWidgetsForPanel(dashboard?.widget_layout, "left").map((w) => {
               const Component = WIDGET_MAP[w.widget];
               if (!Component) return null;
-              const props = (w.widget === "clock" || w.widget === "news") ? { settings: w.settings } : {};
+              const props = (w.widget === "clock" || w.widget === "news" || w.widget === "wordoftheday") ? { settings: w.settings } : {};
               return <Component key={w.widget} {...props} kioskMode={kioskMode} />;
             })}
           </div>
@@ -140,7 +143,7 @@ export default function Dashboard() {
             {getWidgetsForPanel(dashboard?.widget_layout, "right").map((w) => {
               const Component = WIDGET_MAP[w.widget];
               if (!Component) return null;
-              const props = (w.widget === "clock" || w.widget === "news") ? { settings: w.settings } : {};
+              const props = (w.widget === "clock" || w.widget === "news" || w.widget === "wordoftheday") ? { settings: w.settings } : {};
               return <Component key={w.widget} {...props} kioskMode={kioskMode} />;
             })}
           </div>

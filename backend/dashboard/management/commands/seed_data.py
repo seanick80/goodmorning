@@ -45,6 +45,13 @@ DEFAULT_WIDGET_LAYOUT = [
         "settings": {"google_calendar_ids": []},
     },
     {
+        "widget": "wordoftheday",
+        "enabled": False,
+        "position": 2,
+        "panel": "left",
+        "settings": {"grade_level": 1},
+    },
+    {
         "widget": "news",
         "enabled": True,
         "position": 2,
