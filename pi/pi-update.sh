@@ -30,6 +30,10 @@ if [[ ! -d "$VENV" ]]; then
     MODE="--full"
 fi
 
+# Ensure venv ownership is correct (atomic swap deploys can leave root-owned files)
+info "Fixing venv ownership..."
+sudo chown -R goodmorning:goodmorning "$BACKEND"
+
 # Full mode: install/upgrade dependencies
 if [[ "$MODE" == "--full" || "$MODE" == "--setup" ]]; then
     info "Installing Python dependencies..."

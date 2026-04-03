@@ -16,13 +16,14 @@ A full-stack web dashboard designed for a tablet display in a living room. Shows
 
 | Widget | Data Source | Update Frequency |
 |--------|-----------|-----------------|
-| Clock | Client-side | Every second |
+| Clock | Client-side | Every minute |
 | Weather | Open-Meteo API (no key required) | Every 15 minutes |
 | Stocks | Finnhub API (free tier) | Every 5 minutes |
 | Calendar | Google Calendar API (OAuth) | Every 30 minutes |
 | News | RSS feeds (BBC, NPR, Reuters, AP, Ars Technica, Hacker News) | Every 60 minutes |
 | Photos | Google Photos Picker API | Configurable (15-300s) |
 | Glucose | Dexcom Share API (CGM) | Every 5 minutes |
+| Word of the Day | Static JSON dataset (phonics curriculum) | Hourly |
 
 ## Layout
 
@@ -106,7 +107,7 @@ cd backend
 source .venv/Scripts/activate
 python -m pytest -v
 
-# Frontend (23 tests)
+# Frontend (88 tests)
 cd frontend
 npm test
 ```
@@ -143,6 +144,7 @@ Copy `backend/.env.example` to `backend/.env` and configure:
 | `/api/photos/picker/session/<id>/poll/` | GET | Poll picker session status |
 | `/api/photos/picker/session/<id>/media/` | GET | Fetch picker media items |
 | `/api/glucose/` | GET | Current glucose reading + 3hr history |
+| `/api/word-of-the-day/` | GET | Today's phonics word + pattern |
 
 ## Project Structure
 
@@ -188,7 +190,8 @@ goodmorning/
         WidgetCard.jsx      # Shared glass-morphism card wrapper
         StaleIndicator.tsx  # Data freshness warning icon
         widgets/            # Clock, Weather, Stocks, Calendar, News,
-                            #   Glucose, LocationSelector
+                            #   Glucose, WordOfTheDay, LocationSelector
+        widgets/__tests__/  # Component tests (vitest + @testing-library/react)
         mocks/              # Static layout mockups (Grid, Hero, Band, Featured)
   pi/                       # Raspberry Pi deployment configs
     pi-setup.sh             #   First-time Pi bootstrap
@@ -221,6 +224,7 @@ For Raspberry Pi with a DSI touchscreen (e.g., Goodix capacitive):
 
 ## Future Work
 
+- Reward chart widget (weekly habit tracker for kids — execution plan in `.tasks/`)
 - Privacy Policy page (needed for Google verification)
 - In-dashboard detail view (iframe or panel) for stocks/news instead of external links
 - PWA support (tablet home screen install)
