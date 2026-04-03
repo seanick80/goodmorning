@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [react()],
   test: {
     environment: 'happy-dom',
+    setupFiles: ['./src/setupTests.js'],
+    css: { modules: { classNameStrategy: 'non-scoped' } },
   },
   server: {
     port: 5173,
