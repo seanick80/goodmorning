@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { fetchWordOfTheDay } from "../../api/wordoftheday";
 import WidgetCard from "../WidgetCard";
@@ -37,11 +38,26 @@ function highlightPattern(word, pattern, patternPosition) {
   );
 }
 
+function useToday() {
+  const [today, setToday] = useState(
+    () => new Date().toLocaleDateString("en-CA"),
+  );
+  useEffect(() => {
+    const id = setInterval(() => {
+      const now = new Date().toLocaleDateString("en-CA");
+      setToday((prev) => (prev !== now ? now : prev));
+    }, 60_000);
+    return () => clearInterval(id);
+  }, []);
+  return today;
+}
+
 export default function WordOfTheDayWidget() {
+  const today = useToday();
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["wordoftheday"],
+    queryKey: ["wordoftheday", today],
     queryFn: fetchWordOfTheDay,
-    refetchInterval: 3600000,
+    staleTime: Infinity,
   });
 
   if (isLoading) {
