@@ -56,7 +56,7 @@ export default function WordOfTheDayWidget() {
   const today = useToday();
   const { data, isLoading, isError } = useQuery({
     queryKey: ["wordoftheday", today],
-    queryFn: fetchWordOfTheDay,
+    queryFn: () => fetchWordOfTheDay(today),
     staleTime: Infinity,
   });
 

@@ -543,7 +543,14 @@ class WordOfTheDayView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        today = date.today()
+        date_str = request.query_params.get("date")
+        if date_str:
+            try:
+                today = date.fromisoformat(date_str)
+            except ValueError:
+                today = date.today()
+        else:
+            today = date.today()
         weekday = today.weekday()  # 0=Mon, 6=Sun
 
         # Determine which week we're in

@@ -72,7 +72,12 @@ check_docker() {
 
 check_python() {
     local py=""
-    if command -v python &>/dev/null; then
+    # Prefer the venv Python if it exists
+    if [[ -f "$BACKEND_DIR/.venv/Scripts/python.exe" ]]; then
+        py="$BACKEND_DIR/.venv/Scripts/python.exe"
+    elif [[ -f "$BACKEND_DIR/.venv/bin/python" ]]; then
+        py="$BACKEND_DIR/.venv/bin/python"
+    elif command -v python &>/dev/null; then
         py="python"
     elif command -v python3 &>/dev/null; then
         py="python3"
