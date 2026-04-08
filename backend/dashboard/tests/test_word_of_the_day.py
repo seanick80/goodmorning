@@ -76,11 +76,9 @@ class TestWordOfTheDayView:
         assert "grade" in data
         assert "week_number" in data
         assert "day_index" in data
-        assert "is_weekend" in data
-
     def test_returns_correct_word_for_monday_week1(self, api_client):
         # Week 1, Monday (day_index=0) -> grade_1 week 1 = "at" family
-        # words: ["cat", "bat", "hat", "mat", "sat"]
+        # words: ["cat", "bat", "hat", "mat", "sat", "rat", "flat"]
         _make_wotd_dashboard(start_date="2026-01-05")
 
         with _patch_today(date(2026, 1, 5)):
@@ -93,7 +91,6 @@ class TestWordOfTheDayView:
         assert data["grade"] == 1
         assert data["week_number"] == 1
         assert data["day_index"] == 0
-        assert data["is_weekend"] is False
 
     def test_returns_correct_word_for_wednesday(self, api_client):
         # Week 1, Wednesday (day_index=2) -> "hat"
@@ -106,27 +103,27 @@ class TestWordOfTheDayView:
         assert data["word"] == "hat"
         assert data["day_index"] == 2
 
-    def test_weekend_saturday_returns_friday_word(self, api_client):
-        # Saturday of week 1 -> day_index=4 -> "sat"
+    def test_saturday_returns_6th_word(self, api_client):
+        # Saturday of week 1 -> day_index=5 -> "rat"
         _make_wotd_dashboard(start_date="2026-01-05")
 
         with _patch_today(date(2026, 1, 10)):
             response = api_client.get("/api/word-of-the-day/")
 
         data = response.json()
-        assert data["word"] == "sat"
-        assert data["day_index"] == 4
-        assert data["is_weekend"] is True
+        assert data["word"] == "rat"
+        assert data["day_index"] == 5
 
-    def test_weekend_sunday_returns_friday_word(self, api_client):
+    def test_sunday_returns_7th_word(self, api_client):
+        # Sunday of week 1 -> day_index=6 -> "flat"
         _make_wotd_dashboard(start_date="2026-01-05")
 
         with _patch_today(date(2026, 1, 11)):
             response = api_client.get("/api/word-of-the-day/")
 
         data = response.json()
-        assert data["is_weekend"] is True
-        assert data["day_index"] == 4
+        assert data["word"] == "flat"
+        assert data["day_index"] == 6
 
     def test_cycles_to_week_2(self, api_client):
         # Week 2, Monday -> "an" family, word "can"

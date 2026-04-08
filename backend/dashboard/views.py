@@ -572,13 +572,7 @@ class WordOfTheDayView(APIView):
         week_number = (days_elapsed // 7) % len(weeks)
         week_data = weeks[week_number]
 
-        # Weekend: show Friday's word
-        if weekday >= 5:
-            day_index = 4
-            is_weekend = True
-        else:
-            day_index = weekday
-            is_weekend = False
+        day_index = weekday
 
         word = week_data["words"][day_index]
 
@@ -589,7 +583,6 @@ class WordOfTheDayView(APIView):
             "grade": grade_level,
             "week_number": week_number + 1,
             "day_index": day_index,
-            "is_weekend": is_weekend,
         })
 
 

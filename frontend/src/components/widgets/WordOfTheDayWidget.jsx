@@ -76,8 +76,8 @@ export default function WordOfTheDayWidget() {
     );
   }
 
-  const { word, pattern, pattern_position, day_index, is_weekend } = data;
-  const weekdays = [0, 1, 2, 3, 4];
+  const { word, pattern, pattern_position, day_index } = data;
+  const days = [0, 1, 2, 3, 4, 5, 6];
 
   return (
     <WidgetCard title="WORD OF THE DAY">
@@ -87,16 +87,14 @@ export default function WordOfTheDayWidget() {
       <div className={styles.pattern}>
         This week&apos;s pattern: <strong>-{pattern}</strong>
       </div>
-      {!is_weekend && (
-        <div className={styles.dots}>
-          {weekdays.map((d) => {
-            let dotClass = styles.dot;
-            if (d < day_index) dotClass += ` ${styles.dotActive}`;
-            if (d === day_index) dotClass += ` ${styles.dotCurrent}`;
-            return <span key={d} className={dotClass} />;
-          })}
-        </div>
-      )}
+      <div className={styles.dots}>
+        {days.map((d) => {
+          let dotClass = styles.dot;
+          if (d < day_index) dotClass += ` ${styles.dotActive}`;
+          if (d === day_index) dotClass += ` ${styles.dotCurrent}`;
+          return <span key={d} className={dotClass} />;
+        })}
+      </div>
     </WidgetCard>
   );
 }

@@ -28,7 +28,6 @@ describe("WordOfTheDayWidget", () => {
         pattern: "at",
         pattern_position: "end",
         day_index: 0,
-        is_weekend: false,
       },
       isLoading: false,
       isError: false,
@@ -46,7 +45,6 @@ describe("WordOfTheDayWidget", () => {
         pattern: "at",
         pattern_position: "end",
         day_index: 0,
-        is_weekend: false,
       },
       isLoading: false,
       isError: false,
@@ -64,7 +62,6 @@ describe("WordOfTheDayWidget", () => {
         pattern: "sh",
         pattern_position: "start",
         day_index: 2,
-        is_weekend: false,
       },
       isLoading: false,
       isError: false,
@@ -82,7 +79,6 @@ describe("WordOfTheDayWidget", () => {
         pattern: "oo",
         pattern_position: "middle",
         day_index: 1,
-        is_weekend: false,
       },
       isLoading: false,
       isError: false,
@@ -100,7 +96,6 @@ describe("WordOfTheDayWidget", () => {
         pattern: "at",
         pattern_position: "end",
         day_index: 0,
-        is_weekend: false,
       },
       isLoading: false,
       isError: false,
@@ -116,31 +111,13 @@ describe("WordOfTheDayWidget", () => {
         pattern: "at",
         pattern_position: "end",
         day_index: 2,
-        is_weekend: false,
       },
       isLoading: false,
       isError: false,
     });
     render(<WordOfTheDayWidget />);
     const dots = document.querySelectorAll(".dot, .dotActive, .dotCurrent");
-    expect(dots.length).toBe(5);
-  });
-
-  it("does not render dots on weekends", () => {
-    useQuery.mockReturnValue({
-      data: {
-        word: "cat",
-        pattern: "at",
-        pattern_position: "end",
-        day_index: 4,
-        is_weekend: true,
-      },
-      isLoading: false,
-      isError: false,
-    });
-    render(<WordOfTheDayWidget />);
-    const dotsContainer = document.querySelector(".dots");
-    expect(dotsContainer).not.toBeInTheDocument();
+    expect(dots.length).toBe(7);
   });
 
   it("marks active and current dots correctly", () => {
@@ -150,7 +127,6 @@ describe("WordOfTheDayWidget", () => {
         pattern: "at",
         pattern_position: "end",
         day_index: 2,
-        is_weekend: false,
       },
       isLoading: false,
       isError: false,

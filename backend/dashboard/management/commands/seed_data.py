@@ -49,7 +49,7 @@ DEFAULT_WIDGET_LAYOUT = [
         "enabled": False,
         "position": 2,
         "panel": "left",
-        "settings": {"grade_level": 1},
+        "settings": {"grade_level": 2},
     },
     {
         "widget": "news",
