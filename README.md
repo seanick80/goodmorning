@@ -23,7 +23,7 @@ A full-stack web dashboard designed for a tablet display in a living room. Shows
 | News | RSS feeds (BBC, NPR, Reuters, AP, Ars Technica, Hacker News) | Every 60 minutes |
 | Photos | Google Photos Picker API | Configurable (15-300s) |
 | Glucose | Dexcom Share API (CGM) | Every 5 minutes |
-| Word of the Day | Static JSON dataset (phonics curriculum) | Hourly |
+| Word of the Day | Static JSON dataset (phonics curriculum, grades 1-3) | Every 15 minutes |
 
 ## Layout
 
@@ -102,12 +102,12 @@ After startup:
 
 ### Run Tests
 ```bash
-# Backend (137 tests) — requires PostgreSQL running
+# Backend (150 tests) — requires PostgreSQL running
 cd backend
 source .venv/Scripts/activate
 python -m pytest -v
 
-# Frontend (88 tests)
+# Frontend (87 tests)
 cd frontend
 npm test
 ```
@@ -144,7 +144,7 @@ Copy `backend/.env.example` to `backend/.env` and configure:
 | `/api/photos/picker/session/<id>/poll/` | GET | Poll picker session status |
 | `/api/photos/picker/session/<id>/media/` | GET | Fetch picker media items |
 | `/api/glucose/` | GET | Current glucose reading + 3hr history |
-| `/api/word-of-the-day/` | GET | Today's phonics word + pattern |
+| `/api/word-of-the-day/` | GET | Today's phonics word + pattern (`?date=YYYY-MM-DD`) |
 
 ## Project Structure
 
@@ -174,7 +174,7 @@ goodmorning/
         run_scheduler.py    # APScheduler management command
         seed_data.py        # Dev data seeder
         setup_google_oauth.py  # Google OAuth bootstrap
-      tests/                # pytest + factory_boy (137 tests)
+      tests/                # pytest + factory_boy (150 tests)
     manage.py
   frontend/
     src/
