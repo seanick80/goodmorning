@@ -57,7 +57,8 @@ export default function WordOfTheDayWidget() {
   const { data, isLoading, isError } = useQuery({
     queryKey: ["wordoftheday", today],
     queryFn: () => fetchWordOfTheDay(today),
-    staleTime: Infinity,
+    staleTime: 15 * 60_000,
+    refetchInterval: 15 * 60_000,
   });
 
   if (isLoading) {
