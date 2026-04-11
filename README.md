@@ -2,6 +2,9 @@
 
 A full-stack web dashboard designed for a tablet display in a living room. Shows at-a-glance information you want to see first thing in the morning: time, weather, stocks, calendar, and news headlines.
 
+<!-- Issue tracking: bugs are filed in Linear (team GM) and linked via `Fixes GM-N` in PR bodies. -->
+
+
 ![Dashboard Screenshot](docs/dashboard-screenshot.png)
 
 ## Tech Stack
