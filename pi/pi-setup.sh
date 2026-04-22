@@ -42,7 +42,7 @@ apt-get install -y -qq \
     python3 python3-venv python3-dev \
     postgresql postgresql-client \
     nginx \
-    chromium-browser \
+    chromium \
     libpq-dev gcc \
     curl
 
@@ -74,8 +74,11 @@ sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='$APP_USER'" 
 
 # Install tuning config
 if [[ -f "$APP_DIR/pi/postgresql.conf.d/tuning.conf" ]]; then
-    mkdir -p /etc/postgresql/16/main/conf.d
-    cp "$APP_DIR/pi/postgresql.conf.d/tuning.conf" /etc/postgresql/16/main/conf.d/
+    PG_CONF_DIR=$(find /etc/postgresql -maxdepth 2 -name main -type d 2>/dev/null | head -1)
+    if [[ -n "$PG_CONF_DIR" ]]; then
+        mkdir -p "$PG_CONF_DIR/conf.d"
+        cp "$APP_DIR/pi/postgresql.conf.d/tuning.conf" "$PG_CONF_DIR/conf.d/"
+    fi
     systemctl restart postgresql
 fi
 
@@ -181,7 +184,7 @@ sudo -u pi tee "$AUTOSTART_DIR/goodmorning-kiosk.desktop" > /dev/null <<'DESKTOP
 [Desktop Entry]
 Type=Application
 Name=Good Morning Dashboard
-Exec=chromium-browser --start-fullscreen --noerrdialogs --disable-translate --no-first-run --disable-infobars --disable-session-crashed-bubble --disable-features=TranslateUI --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --password-store=basic http://localhost
+Exec=chromium --start-fullscreen --noerrdialogs --disable-translate --no-first-run --disable-infobars --disable-session-crashed-bubble --disable-features=TranslateUI --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --password-store=basic http://localhost
 Hidden=false
 X-GNOME-Autostart-enabled=true
 DESKTOP
@@ -197,6 +200,32 @@ if ! grep -q "hdmi_blanking=2" /boot/firmware/config.txt 2>/dev/null; then
 fi
 
 ok "Kiosk mode configured (XDG autostart for pi user)."
+
+# -------------------------------------------------------------------
+# 9b. DSI touchscreen rotation (landscape mode)
+# -------------------------------------------------------------------
+info "Configuring DSI display rotation..."
+
+# kanshi auto-applies display transforms when the Wayland session starts
+KANSHI_DIR="$PI_HOME/.config/kanshi"
+sudo -u pi mkdir -p "$KANSHI_DIR"
+sudo -u pi tee "$KANSHI_DIR/config" > /dev/null <<'KANSHI'
+profile dsi-landscape {
+    output DSI-2 mode 720x1280 position 0,0 transform 270
+}
+KANSHI
+
+# labwc: map touchscreen input to the DSI output
+LABWC_DIR="$PI_HOME/.config/labwc"
+sudo -u pi mkdir -p "$LABWC_DIR"
+sudo -u pi tee "$LABWC_DIR/rc.xml" > /dev/null <<'LABWC'
+<?xml version="1.0"?>
+<openbox_config xmlns="http://openbox.org/3.4/rc">
+	<touch deviceName="Goodix Capacitive TouchScreen" mapToOutput="DSI-2" mouseEmulation="yes"/>
+</openbox_config>
+LABWC
+
+ok "DSI display rotation configured (270° landscape via kanshi)."
 
 # -------------------------------------------------------------------
 # 10. Firewall (optional, if ufw is installed)

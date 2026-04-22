@@ -12,6 +12,8 @@ backend/.env
 
 # Production secrets
 pi/.env.production
+secrets/
+backups/
 
 # Node
 node_modules/
