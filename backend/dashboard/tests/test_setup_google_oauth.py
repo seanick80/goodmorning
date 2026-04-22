@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from django.contrib.sites.models import Site
 from django.core.management import CommandError, call_command
 
 from allauth.socialaccount.models import SocialApp
@@ -11,49 +10,38 @@ from allauth.socialaccount.models import SocialApp
 
 @pytest.mark.django_db()
 class TestSetupGoogleOAuth:
-    def test_creates_social_app(self, monkeypatch):
+    def test_verifies_config(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-client-id")
         monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-client-secret")
 
         call_command("setup_google_oauth")
 
-        app = SocialApp.objects.get(provider="google")
-        assert app.client_id == "test-client-id"
-        assert app.secret == "test-client-secret"
-        assert app.name == "Google"
-        assert app.sites.filter(id=1).exists()
+        # Command should NOT create DB entries (settings-based config)
+        assert SocialApp.objects.filter(provider="google").count() == 0
 
-    def test_updates_existing_social_app(self, monkeypatch):
-        monkeypatch.setenv("GOOGLE_CLIENT_ID", "old-id")
-        monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "old-secret")
-        call_command("setup_google_oauth")
-
-        monkeypatch.setenv("GOOGLE_CLIENT_ID", "new-id")
-        monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "new-secret")
-        call_command("setup_google_oauth")
-
-        assert SocialApp.objects.filter(provider="google").count() == 1
-        app = SocialApp.objects.get(provider="google")
-        assert app.client_id == "new-id"
-        assert app.secret == "new-secret"
-
-    def test_updates_default_site_domain(self, monkeypatch):
+    def test_removes_legacy_db_entries(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.setenv("GOOGLE_CLIENT_ID", "test-id")
         monkeypatch.setenv("GOOGLE_CLIENT_SECRET", "test-secret")
 
-        site = Site.objects.get_or_create(
-            id=1, defaults={"domain": "example.com", "name": "example"},
-        )[0]
-        site.domain = "example.com"
-        site.save()
+        # Create a legacy DB SocialApp
+        SocialApp.objects.create(
+            provider="google",
+            name="Google",
+            client_id="old-id",
+            secret="old-secret",
+        )
+        assert SocialApp.objects.filter(provider="google").count() == 1
 
         call_command("setup_google_oauth")
 
-        site.refresh_from_db()
-        assert site.domain == "localhost"
-        assert site.name == "Good Morning Dashboard"
+        # Legacy entry should be cleaned up
+        assert SocialApp.objects.filter(provider="google").count() == 0
 
-    def test_raises_without_credentials(self, monkeypatch):
+    def test_raises_without_credentials(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
         monkeypatch.delenv("GOOGLE_CLIENT_ID", raising=False)
         monkeypatch.delenv("GOOGLE_CLIENT_SECRET", raising=False)
 

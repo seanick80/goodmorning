@@ -149,6 +149,8 @@ AUTHENTICATION_BACKENDS = [
 # django-allauth
 ACCOUNT_LOGIN_METHODS = {"email"}
 ACCOUNT_SIGNUP_FIELDS = ["email*", "password1*", "password2*"]
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 SOCIALACCOUNT_PROVIDERS = {
     "google": {
         "SCOPE": [
@@ -157,10 +159,12 @@ SOCIALACCOUNT_PROVIDERS = {
             "https://www.googleapis.com/auth/photospicker.mediaitems.readonly",
         ],
         "AUTH_PARAMS": {"access_type": "offline", "prompt": "consent"},
+        "APP": {
+            "client_id": GOOGLE_CLIENT_ID,
+            "secret": GOOGLE_CLIENT_SECRET,
+        },
     },
 }
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 LOGIN_REDIRECT_URL = "/"
 LOGOUT_REDIRECT_URL = "/"
 SOCIALACCOUNT_LOGIN_ON_GET = True

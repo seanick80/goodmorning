@@ -294,7 +294,7 @@ sudo -u pi tee "$AUTOSTART_DIR/goodmorning-kiosk.desktop" > /dev/null <<'DESKTOP
 [Desktop Entry]
 Type=Application
 Name=Good Morning Dashboard
-Exec=chromium --start-fullscreen --noerrdialogs --disable-translate --no-first-run --disable-infobars --disable-session-crashed-bubble --disable-features=TranslateUI --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --password-store=basic http://localhost
+Exec=chromium --ozone-platform=wayland --start-fullscreen --noerrdialogs --disable-translate --no-first-run --disable-infobars --disable-session-crashed-bubble --disable-features=TranslateUI --check-for-update-interval=31536000 --autoplay-policy=no-user-gesture-required --password-store=basic http://localhost
 Hidden=false
 X-GNOME-Autostart-enabled=true
 DESKTOP

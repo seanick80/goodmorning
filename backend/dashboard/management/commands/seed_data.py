@@ -4,6 +4,7 @@ from datetime import time
 from decimal import Decimal
 
 from django.contrib.auth.models import User
+from django.contrib.sites.models import Site
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
@@ -76,6 +77,14 @@ class Command(BaseCommand):
     help = "Seeds default data for development."
 
     def handle(self, *args, **options):
+        # Fix default Site domain (Django ships with example.com).
+        # Must be "localhost" to match Google Cloud Console redirect URI.
+        site, _ = Site.objects.update_or_create(
+            id=1,
+            defaults={"domain": "localhost", "name": "Good Morning Dashboard"},
+        )
+        self.stdout.write(f"Site domain: {site.domain}")
+
         # Create superuser
         user, created = User.objects.get_or_create(
             username="admin",

@@ -1,4 +1,12 @@
-"""Management command to configure Google OAuth via django-allauth."""
+"""Management command to verify Google OAuth configuration.
+
+Google OAuth credentials are now configured via settings.py using the
+SOCIALACCOUNT_PROVIDERS['google']['APP'] dict, sourced from environment
+variables GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET.
+
+This command verifies the configuration and cleans up any legacy
+DB-stored SocialApp entries that would cause MultipleObjectsReturned.
+"""
 
 from __future__ import annotations
 
@@ -11,7 +19,7 @@ from allauth.socialaccount.models import SocialApp
 
 
 class Command(BaseCommand):
-    help = "Configure Google OAuth SocialApp from environment variables."
+    help = "Verify Google OAuth config and clean up legacy DB entries."
 
     def handle(self, *args: object, **options: object) -> None:
         client_id = os.environ.get("GOOGLE_CLIENT_ID", "")
@@ -23,37 +31,23 @@ class Command(BaseCommand):
                 "in environment variables."
             )
 
-        # Ensure the default Site has a sensible domain
-        site = Site.objects.get_or_create(
-            id=1,
-            defaults={"domain": "localhost", "name": "Good Morning Dashboard"},
-        )[0]
-        if site.domain == "example.com":
-            site.domain = "localhost"
-            site.name = "Good Morning Dashboard"
-            site.save()
+        # Clean up any legacy DB-stored SocialApps (settings.py handles this now)
+        deleted, _ = SocialApp.objects.filter(provider="google").delete()
+        if deleted:
             self.stdout.write(
-                self.style.SUCCESS("Updated Site domain to 'localhost'")
+                self.style.WARNING(
+                    f"Removed {deleted} legacy DB SocialApp(s) — "
+                    "credentials are now in settings.py"
+                )
             )
 
-        app, created = SocialApp.objects.update_or_create(
-            provider="google",
-            defaults={
-                "name": "Google",
-                "client_id": client_id,
-                "secret": client_secret,
-            },
+        # Verify Site domain
+        site = Site.objects.filter(id=1).first()
+        if site:
+            self.stdout.write(f"Site domain: {site.domain}")
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Google OAuth configured via settings (client_id: {client_id[:20]}...)"
+            )
         )
-
-        # Link to current site
-        if not app.sites.filter(id=site.id).exists():
-            app.sites.add(site)
-
-        if created:
-            self.stdout.write(
-                self.style.SUCCESS("Created Google OAuth SocialApp")
-            )
-        else:
-            self.stdout.write(
-                self.style.SUCCESS("Updated Google OAuth SocialApp")
-            )
