@@ -106,9 +106,19 @@ check_node() {
 }
 
 # ---------------------------------------------------------------------------
-# Docker / PostgreSQL
+# Docker / PostgreSQL (skipped when DATABASE_URL is unset — SQLite is default)
 # ---------------------------------------------------------------------------
+needs_docker() {
+    # Docker is only needed when DATABASE_URL points to PostgreSQL
+    [[ -n "${DATABASE_URL:-}" ]] && [[ "${DATABASE_URL:-}" == postgres* ]]
+}
+
 start_services() {
+    if ! needs_docker; then
+        ok "Using SQLite — skipping Docker/PostgreSQL."
+        return
+    fi
+
     info "Starting Docker services (PostgreSQL)..."
     docker compose -f "$ROOT_DIR/docker-compose.yml" up -d
 
@@ -268,7 +278,9 @@ main() {
 
     case "$mode" in
         --services)
-            check_docker
+            if needs_docker; then
+                check_docker
+            fi
             start_services
             ;;
         --backend)
@@ -286,14 +298,18 @@ main() {
             stop_app
             ;;
         --test)
-            check_docker
+            if needs_docker; then
+                check_docker
+            fi
             start_services
             check_python
             setup_backend
             run_tests "${@:2}"
             ;;
         all|"")
-            check_docker
+            if needs_docker; then
+                check_docker
+            fi
             check_python
             check_node
             start_services

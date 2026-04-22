@@ -75,10 +75,10 @@ DATA_DIR = os.environ.get(
 )
 os.makedirs(DATA_DIR, exist_ok=True)
 
+_sqlite_url = f"sqlite:///{os.path.join(DATA_DIR, 'db.sqlite3')}"
+_database_url = os.environ.get("DATABASE_URL", "").strip() or _sqlite_url
 DATABASES = {
-    "default": dj_database_url.config(
-        default=f"sqlite:///{os.path.join(DATA_DIR, 'db.sqlite3')}",
-    )
+    "default": dj_database_url.parse(_database_url),
 }
 
 # SQLite optimizations (applied only when using SQLite)

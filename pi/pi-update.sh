@@ -23,6 +23,14 @@ NC='\033[0m'
 info() { echo -e "${CYAN}[pi]${NC} $*"; }
 ok()   { echo -e "${GREEN}[pi]${NC} $*"; }
 
+# Load configuration
+CONF_FILE="$APP_DIR/pi/pi.conf"
+if [[ -f "$CONF_FILE" ]]; then
+    # shellcheck source=pi.conf
+    source "$CONF_FILE"
+fi
+GM_DATABASE="${GM_DATABASE:-postgres}"
+
 # Create venv if missing
 if [[ ! -d "$VENV" ]]; then
     info "Creating Python virtual environment..."
@@ -51,24 +59,9 @@ $PYTHON "$BACKEND/manage.py" collectstatic --no-input --clear -v0
 
 # Re-install configs if --setup
 if [[ "$MODE" == "--setup" ]]; then
-    info "Installing systemd services..."
-    sudo cp "$APP_DIR/pi/goodmorning-web.service" /etc/systemd/system/
-    sudo cp "$APP_DIR/pi/goodmorning-scheduler.service" /etc/systemd/system/
-    sudo cp "$APP_DIR/pi/goodmorning-kiosk.service" /etc/systemd/system/
-    sudo systemctl daemon-reload
-    sudo systemctl enable goodmorning-web goodmorning-scheduler goodmorning-kiosk
-
-    info "Installing nginx config..."
-    sudo cp "$APP_DIR/pi/nginx.conf" /etc/nginx/sites-available/goodmorning
-    sudo ln -sf /etc/nginx/sites-available/goodmorning /etc/nginx/sites-enabled/goodmorning
-    sudo rm -f /etc/nginx/sites-enabled/default
-    sudo nginx -t
-    sudo systemctl reload nginx
-
-    info "Installing PostgreSQL tuning..."
-    sudo mkdir -p /etc/postgresql/16/main/conf.d
-    sudo cp "$APP_DIR/pi/postgresql.conf.d/tuning.conf" /etc/postgresql/16/main/conf.d/
-    sudo systemctl restart postgresql
+    info "Re-running pi-setup.sh for config installation..."
+    sudo bash "$APP_DIR/pi/pi-setup.sh"
+    exit 0
 fi
 
 # Restart application services

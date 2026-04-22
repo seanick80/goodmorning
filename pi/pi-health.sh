@@ -15,6 +15,14 @@ YELLOW='\033[1;33m'
 CYAN='\033[0;36m'
 NC='\033[0m'
 
+# Load configuration
+CONF_FILE="$APP_DIR/pi/pi.conf"
+if [[ -f "$CONF_FILE" ]]; then
+    # shellcheck source=pi.conf
+    source "$CONF_FILE"
+fi
+GM_DATABASE="${GM_DATABASE:-postgres}"
+
 echo ""
 echo -e "${CYAN}Good Morning Dashboard — Health Check${NC}"
 echo "────────────────────────────────────────"
@@ -22,9 +30,12 @@ echo "────────────────────────�
 # Uptime
 echo -e "Uptime:       $(uptime -p | sed 's/^up //')"
 
+# Configuration
+echo -e "Config:        database=$GM_DATABASE workers=${GM_WORKERS:-2} desktop=${GM_DESKTOP:-full} vnc=${GM_VNC:-on}"
+
 # Services
 echo "Services:"
-for svc in goodmorning-web goodmorning-scheduler goodmorning-kiosk; do
+for svc in goodmorning-web goodmorning-scheduler; do
     short="${svc#goodmorning-}"
     state=$(systemctl is-active "$svc" 2>/dev/null || echo "inactive")
     since=$(systemctl show "$svc" --property=ActiveEnterTimestamp --value 2>/dev/null || echo "unknown")
@@ -35,19 +46,23 @@ for svc in goodmorning-web goodmorning-scheduler goodmorning-kiosk; do
     fi
 done
 
-# Database
+# Database (works with both SQLite and PostgreSQL)
 db_status=$($MANAGE shell -c "
 from django.db import connection
-cursor = connection.cursor()
-cursor.execute(\"SELECT table_name FROM information_schema.tables WHERE table_schema='public'\")
-tables = cursor.fetchall()
+from django.apps import apps
+
+models = apps.get_app_config('dashboard').get_models()
 total_rows = 0
-for (t,) in tables:
-    cursor.execute(f'SELECT COUNT(*) FROM \"{t}\"')
-    total_rows += cursor.fetchone()[0]
-print(f'OK ({len(tables)} tables, {total_rows} rows)')
+table_count = 0
+for model in models:
+    try:
+        total_rows += model.objects.count()
+        table_count += 1
+    except Exception:
+        pass
+print(f'OK ({table_count} tables, {total_rows} rows)')
 " 2>/dev/null || echo "ERROR — cannot connect")
-echo -e "Database:      $db_status"
+echo -e "Database:      $GM_DATABASE — $db_status"
 
 # Last fetch times
 echo "Last fetch:"

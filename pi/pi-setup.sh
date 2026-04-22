@@ -7,26 +7,50 @@
 # Or copy it to the Pi and run:
 #   sudo bash /opt/goodmorning/pi/pi-setup.sh
 #
-# Prerequisites: Raspberry Pi OS Lite (64-bit), SSH enabled, Wi-Fi configured.
+# Configuration is read from pi/pi.conf. Edit that file before running.
+#
+# Prerequisites: Raspberry Pi OS (64-bit), SSH enabled, Wi-Fi configured.
 
 set -euo pipefail
 
 APP_DIR="/opt/goodmorning"
 APP_USER="goodmorning"
+PI_HOME="/home/pi"
 
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 RED='\033[0;31m'
+YELLOW='\033[1;33m'
 NC='\033[0m'
 
 info() { echo -e "${CYAN}[setup]${NC} $*"; }
 ok()   { echo -e "${GREEN}[setup]${NC} $*"; }
+warn() { echo -e "${YELLOW}[setup]${NC} $*"; }
 fail() { echo -e "${RED}[setup]${NC} $*"; exit 1; }
 
 # Must run as root
 if [[ $EUID -ne 0 ]]; then
     fail "This script must be run as root (use sudo)."
 fi
+
+# -------------------------------------------------------------------
+# 0. Load configuration
+# -------------------------------------------------------------------
+CONF_FILE="$APP_DIR/pi/pi.conf"
+if [[ -f "$CONF_FILE" ]]; then
+    # shellcheck source=pi.conf
+    source "$CONF_FILE"
+    ok "Loaded configuration from pi.conf"
+else
+    warn "pi.conf not found — using defaults (postgres, 2 workers, full desktop, vnc on)"
+fi
+
+GM_DATABASE="${GM_DATABASE:-postgres}"
+GM_WORKERS="${GM_WORKERS:-2}"
+GM_DESKTOP="${GM_DESKTOP:-full}"
+GM_VNC="${GM_VNC:-on}"
+
+info "Configuration: database=$GM_DATABASE workers=$GM_WORKERS desktop=$GM_DESKTOP vnc=$GM_VNC"
 
 # -------------------------------------------------------------------
 # 1. System packages
@@ -38,13 +62,11 @@ apt-get update -qq
 # manually before deploying if desired: sudo apt-get upgrade -y
 
 info "Installing dependencies..."
-apt-get install -y -qq \
-    python3 python3-venv python3-dev \
-    postgresql postgresql-client \
-    nginx \
-    chromium \
-    libpq-dev gcc \
-    curl
+PACKAGES=(python3 python3-venv python3-dev nginx chromium curl)
+if [[ "$GM_DATABASE" == "postgres" ]]; then
+    PACKAGES+=(postgresql postgresql-client libpq-dev gcc)
+fi
+apt-get install -y -qq "${PACKAGES[@]}"
 
 ok "System packages installed."
 
@@ -57,32 +79,38 @@ if ! id "$APP_USER" &>/dev/null; then
 fi
 
 # -------------------------------------------------------------------
-# 3. PostgreSQL
+# 3. Database
 # -------------------------------------------------------------------
-info "Configuring PostgreSQL..."
+if [[ "$GM_DATABASE" == "postgres" ]]; then
+    info "Configuring PostgreSQL..."
+    systemctl enable postgresql
+    systemctl start postgresql
 
-# Ensure PostgreSQL is running
-systemctl enable postgresql
-systemctl start postgresql
+    sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='$APP_USER'" | \
+        grep -q 1 || sudo -u postgres psql -c "CREATE ROLE $APP_USER WITH LOGIN PASSWORD '$APP_USER';"
 
-# Create database user and database (idempotent)
-sudo -u postgres psql -tc "SELECT 1 FROM pg_roles WHERE rolname='$APP_USER'" | \
-    grep -q 1 || sudo -u postgres psql -c "CREATE ROLE $APP_USER WITH LOGIN PASSWORD '$APP_USER';"
+    sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='$APP_USER'" | \
+        grep -q 1 || sudo -u postgres psql -c "CREATE DATABASE $APP_USER OWNER $APP_USER;"
 
-sudo -u postgres psql -tc "SELECT 1 FROM pg_database WHERE datname='$APP_USER'" | \
-    grep -q 1 || sudo -u postgres psql -c "CREATE DATABASE $APP_USER OWNER $APP_USER;"
-
-# Install tuning config
-if [[ -f "$APP_DIR/pi/postgresql.conf.d/tuning.conf" ]]; then
-    PG_CONF_DIR=$(find /etc/postgresql -maxdepth 2 -name main -type d 2>/dev/null | head -1)
-    if [[ -n "$PG_CONF_DIR" ]]; then
-        mkdir -p "$PG_CONF_DIR/conf.d"
-        cp "$APP_DIR/pi/postgresql.conf.d/tuning.conf" "$PG_CONF_DIR/conf.d/"
+    if [[ -f "$APP_DIR/pi/postgresql.conf.d/tuning.conf" ]]; then
+        PG_CONF_DIR=$(find /etc/postgresql -maxdepth 2 -name main -type d 2>/dev/null | head -1)
+        if [[ -n "$PG_CONF_DIR" ]]; then
+            mkdir -p "$PG_CONF_DIR/conf.d"
+            cp "$APP_DIR/pi/postgresql.conf.d/tuning.conf" "$PG_CONF_DIR/conf.d/"
+        fi
+        systemctl restart postgresql
     fi
-    systemctl restart postgresql
+    ok "PostgreSQL configured."
+else
+    info "Using SQLite — skipping PostgreSQL setup."
+    # Stop and disable PostgreSQL if it was previously installed
+    if systemctl is-active postgresql &>/dev/null; then
+        info "Stopping PostgreSQL (no longer needed)..."
+        systemctl stop postgresql
+        systemctl disable postgresql
+    fi
+    ok "SQLite configured (zero-overhead, WAL mode)."
 fi
-
-ok "PostgreSQL configured."
 
 # -------------------------------------------------------------------
 # 4. Application directory
@@ -91,35 +119,53 @@ info "Setting up application directory..."
 mkdir -p "$APP_DIR"
 chown -R "$APP_USER:$APP_USER" "$APP_DIR"
 
-# Create log directory
 mkdir -p "$APP_DIR/backend/logs"
 chown -R "$APP_USER:$APP_USER" "$APP_DIR/backend/logs"
+
+# SQLite data directory (owned by app user)
+if [[ "$GM_DATABASE" == "sqlite" ]]; then
+    SQLITE_DATA_DIR="/home/$APP_USER/goodmorning-data"
+    sudo -u "$APP_USER" mkdir -p "$SQLITE_DATA_DIR"
+fi
 
 # -------------------------------------------------------------------
 # 5. Production environment file
 # -------------------------------------------------------------------
 ENV_FILE="$APP_DIR/backend/.env"
 if [[ ! -f "$ENV_FILE" ]]; then
-    info "Creating production .env (you should edit this)..."
+    info "Creating production .env..."
     if [[ -f "$APP_DIR/pi/.env.production" ]]; then
         cp "$APP_DIR/pi/.env.production" "$ENV_FILE"
+        # If switching to SQLite, remove DATABASE_URL so Django uses its default
+        if [[ "$GM_DATABASE" == "sqlite" ]]; then
+            sed -i '/^DATABASE_URL=/d' "$ENV_FILE"
+        fi
     else
-        cat > "$ENV_FILE" <<'ENVEOF'
-DEBUG=False
-SECRET_KEY=CHANGEME-generate-a-real-secret-key
-DATABASE_URL=postgres://goodmorning:goodmorning@localhost:5432/goodmorning
-ALLOWED_HOSTS=goodmorning.local,localhost,127.0.0.1
-FINNHUB_API_KEY=
-WEATHER_LAT=40.7128
-WEATHER_LON=-74.0060
-USER_CALENDAR=
-ENVEOF
+        {
+            echo "DEBUG=False"
+            echo "SECRET_KEY=CHANGEME-generate-a-real-secret-key"
+            if [[ "$GM_DATABASE" == "postgres" ]]; then
+                echo "DATABASE_URL=postgres://goodmorning:goodmorning@localhost:5432/goodmorning"
+            fi
+            echo "ALLOWED_HOSTS=goodmorning.local,localhost,127.0.0.1"
+            echo "FINNHUB_API_KEY="
+            echo "USER_CALENDAR="
+        } > "$ENV_FILE"
     fi
     chown "$APP_USER:$APP_USER" "$ENV_FILE"
     chmod 600 "$ENV_FILE"
     echo ""
     echo -e "${RED}  *** IMPORTANT: Edit $ENV_FILE with a real SECRET_KEY and your API keys ***${NC}"
     echo ""
+else
+    # Existing .env — ensure DATABASE_URL matches config
+    if [[ "$GM_DATABASE" == "sqlite" ]] && grep -q '^DATABASE_URL=' "$ENV_FILE"; then
+        warn "Removing DATABASE_URL from .env (switching to SQLite)..."
+        sed -i '/^DATABASE_URL=/d' "$ENV_FILE"
+    elif [[ "$GM_DATABASE" == "postgres" ]] && ! grep -q '^DATABASE_URL=' "$ENV_FILE"; then
+        warn "Adding DATABASE_URL to .env (switching to PostgreSQL)..."
+        echo "DATABASE_URL=postgres://goodmorning:goodmorning@localhost:5432/goodmorning" >> "$ENV_FILE"
+    fi
 fi
 
 # -------------------------------------------------------------------
@@ -150,11 +196,76 @@ systemctl restart nginx
 ok "nginx configured."
 
 # -------------------------------------------------------------------
-# 8. systemd services
+# 8. systemd services (generated from config)
 # -------------------------------------------------------------------
 info "Installing systemd services..."
-cp "$APP_DIR/pi/goodmorning-web.service" /etc/systemd/system/
-cp "$APP_DIR/pi/goodmorning-scheduler.service" /etc/systemd/system/
+
+# Generate web service
+if [[ "$GM_DATABASE" == "postgres" ]]; then
+    WEB_AFTER="After=network.target postgresql.service"
+    WEB_REQUIRES="Requires=postgresql.service"
+else
+    WEB_AFTER="After=network.target"
+    WEB_REQUIRES=""
+fi
+
+cat > /etc/systemd/system/goodmorning-web.service <<WEBEOF
+[Unit]
+Description=Good Morning Dashboard — gunicorn
+${WEB_AFTER}
+${WEB_REQUIRES}
+
+[Service]
+Type=notify
+User=goodmorning
+Group=goodmorning
+WorkingDirectory=/opt/goodmorning/backend
+Environment=DJANGO_SETTINGS_MODULE=config.settings
+ExecStart=/opt/goodmorning/backend/.venv/bin/gunicorn \\
+    config.wsgi:application \\
+    --bind 127.0.0.1:8000 \\
+    --workers ${GM_WORKERS} \\
+    --timeout 30 \\
+    --access-logfile - \\
+    --error-logfile -
+ExecReload=/bin/kill -s HUP \$MAINPID
+Restart=always
+RestartSec=5
+KillMode=mixed
+
+[Install]
+WantedBy=multi-user.target
+WEBEOF
+
+# Generate scheduler service
+if [[ "$GM_DATABASE" == "postgres" ]]; then
+    SCHED_AFTER="After=network.target postgresql.service goodmorning-web.service"
+    SCHED_REQUIRES="Requires=postgresql.service"
+else
+    SCHED_AFTER="After=network.target goodmorning-web.service"
+    SCHED_REQUIRES=""
+fi
+
+cat > /etc/systemd/system/goodmorning-scheduler.service <<SCHEDEOF
+[Unit]
+Description=Good Morning Dashboard — APScheduler
+${SCHED_AFTER}
+${SCHED_REQUIRES}
+
+[Service]
+Type=simple
+User=goodmorning
+Group=goodmorning
+WorkingDirectory=/opt/goodmorning/backend
+Environment=DJANGO_SETTINGS_MODULE=config.settings
+ExecStart=/opt/goodmorning/backend/.venv/bin/python \\
+    manage.py run_scheduler
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+SCHEDEOF
 
 # Remove old kiosk service if present (replaced by XDG autostart)
 rm -f /etc/systemd/system/goodmorning-kiosk.service
@@ -162,7 +273,7 @@ rm -f /etc/systemd/system/goodmorning-kiosk.service
 systemctl daemon-reload
 systemctl enable goodmorning-web goodmorning-scheduler
 systemctl start goodmorning-web goodmorning-scheduler
-ok "Application services started."
+ok "Application services started (workers=$GM_WORKERS, database=$GM_DATABASE)."
 
 # -------------------------------------------------------------------
 # 9. Kiosk mode (XDG autostart in pi user's desktop session)
@@ -177,7 +288,6 @@ rm -f "/home/$APP_USER/.bash_profile"
 # Create XDG autostart entry for the pi user's desktop session.
 # This launches Chromium with --start-fullscreen (not --kiosk) so that
 # F11 toggles fullscreen and the desktop session remains accessible.
-PI_HOME="/home/pi"
 AUTOSTART_DIR="$PI_HOME/.config/autostart"
 sudo -u pi mkdir -p "$AUTOSTART_DIR"
 sudo -u pi tee "$AUTOSTART_DIR/goodmorning-kiosk.desktop" > /dev/null <<'DESKTOP'
@@ -206,7 +316,6 @@ ok "Kiosk mode configured (XDG autostart for pi user)."
 # -------------------------------------------------------------------
 info "Configuring DSI display rotation..."
 
-# kanshi auto-applies display transforms when the Wayland session starts
 KANSHI_DIR="$PI_HOME/.config/kanshi"
 sudo -u pi mkdir -p "$KANSHI_DIR"
 sudo -u pi tee "$KANSHI_DIR/config" > /dev/null <<'KANSHI'
@@ -215,7 +324,6 @@ profile dsi-landscape {
 }
 KANSHI
 
-# labwc: map touchscreen input to the DSI output
 LABWC_DIR="$PI_HOME/.config/labwc"
 sudo -u pi mkdir -p "$LABWC_DIR"
 sudo -u pi tee "$LABWC_DIR/rc.xml" > /dev/null <<'LABWC'
@@ -226,6 +334,47 @@ sudo -u pi tee "$LABWC_DIR/rc.xml" > /dev/null <<'LABWC'
 LABWC
 
 ok "DSI display rotation configured (270° landscape via kanshi)."
+
+# -------------------------------------------------------------------
+# 9c. Desktop lean mode (disable unused desktop services)
+# -------------------------------------------------------------------
+if [[ "$GM_DESKTOP" == "lean" ]]; then
+    info "Configuring lean desktop mode..."
+
+    # Create labwc autostart that suppresses panel, file manager, keyboard
+    LABWC_AUTOSTART="$LABWC_DIR/autostart"
+    sudo -u pi tee "$LABWC_AUTOSTART" > /dev/null <<'AUTOSTART'
+# Lean mode: only essential services.
+# Suppresses wf-panel-pi, pcmanfm desktop, and squeekboard.
+# To revert, delete this file and reboot (or set GM_DESKTOP=full).
+
+# Kill desktop services that the system session starts by default
+killall wf-panel-pi 2>/dev/null || true
+killall pcmanfm 2>/dev/null || true
+killall squeekboard 2>/dev/null || true
+AUTOSTART
+
+    ok "Lean desktop: panel, file manager, and on-screen keyboard disabled (~130 MB saved)."
+else
+    # Full mode: remove lean autostart if present
+    rm -f "$PI_HOME/.config/labwc/autostart"
+    ok "Full desktop mode: all desktop services enabled."
+fi
+
+# -------------------------------------------------------------------
+# 9d. VNC remote access
+# -------------------------------------------------------------------
+if [[ "$GM_VNC" == "off" ]]; then
+    info "Disabling VNC (SSH-only remote access)..."
+    systemctl disable wayvnc 2>/dev/null || true
+    systemctl stop wayvnc 2>/dev/null || true
+    # Also disable rpi-connect's wayvnc if present
+    systemctl disable rpi-connect-wayvnc 2>/dev/null || true
+    systemctl stop rpi-connect-wayvnc 2>/dev/null || true
+    ok "VNC disabled (~43 MB saved)."
+else
+    ok "VNC enabled (wayvnc for remote desktop access)."
+fi
 
 # -------------------------------------------------------------------
 # 10. Firewall (optional, if ufw is installed)
@@ -243,18 +392,13 @@ fi
 # -------------------------------------------------------------------
 info "Hardening SSH..."
 
-# Remove the Raspberry Pi OS SSH block that prevents all auth (including
-# pubkey) when the default password is unchanged. This drop-in file is
-# present on Bookworm+ images and must be removed for SSH to work.
 rm -f /etc/ssh/sshd_config.d/rename_user.conf
 
-# Ensure pubkey auth is enabled (some Pi OS images disable it by default)
 sed -i 's/^#\?PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
 for f in /etc/ssh/sshd_config.d/*.conf; do
     [ -f "$f" ] && sed -i 's/^PubkeyAuthentication no/PubkeyAuthentication yes/' "$f"
 done
 
-# Disable password auth (key-only from here on)
 sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
 
 systemctl reload sshd 2>/dev/null || systemctl reload ssh 2>/dev/null || true
@@ -267,6 +411,12 @@ echo ""
 echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
 echo -e "${GREEN} Setup complete! Reboot to start the kiosk.${NC}"
 echo -e "${GREEN}═══════════════════════════════════════════════════${NC}"
+echo ""
+echo "  Configuration:"
+echo "    Database:   $GM_DATABASE"
+echo "    Workers:    $GM_WORKERS"
+echo "    Desktop:    $GM_DESKTOP"
+echo "    VNC:        $GM_VNC"
 echo ""
 echo "  Dashboard:  http://goodmorning.local"
 echo "  Admin:      http://goodmorning.local/admin/ (admin/admin)"
