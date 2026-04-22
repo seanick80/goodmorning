@@ -341,17 +341,18 @@ ok "DSI display rotation configured (270° landscape via kanshi)."
 if [[ "$GM_DESKTOP" == "lean" ]]; then
     info "Configuring lean desktop mode..."
 
-    # Create labwc autostart that suppresses panel, file manager, keyboard
+    # Override the system labwc autostart (/etc/xdg/labwc/autostart) with
+    # one that only starts essential services. The system autostart uses
+    # lwrespawn which auto-restarts killed processes, so killall won't work.
+    # labwc uses ~/.config/labwc/autostart INSTEAD of the system one when present.
     LABWC_AUTOSTART="$LABWC_DIR/autostart"
     sudo -u pi tee "$LABWC_AUTOSTART" > /dev/null <<'AUTOSTART'
-# Lean mode: only essential services.
-# Suppresses wf-panel-pi, pcmanfm desktop, and squeekboard.
-# To revert, delete this file and reboot (or set GM_DESKTOP=full).
+# Lean mode: essential services only.
+# Omits wf-panel-pi (taskbar), pcmanfm (desktop/file manager), squeekboard (keyboard).
+# To revert, delete this file and reboot (or set GM_DESKTOP=full in pi.conf).
 
-# Kill desktop services that the system session starts by default
-killall wf-panel-pi 2>/dev/null || true
-killall pcmanfm 2>/dev/null || true
-killall squeekboard 2>/dev/null || true
+/usr/bin/kanshi &
+/usr/bin/lxsession-xdg-autostart
 AUTOSTART
 
     ok "Lean desktop: panel, file manager, and on-screen keyboard disabled (~130 MB saved)."
@@ -366,11 +367,18 @@ fi
 # -------------------------------------------------------------------
 if [[ "$GM_VNC" == "off" ]]; then
     info "Disabling VNC (SSH-only remote access)..."
+    # rpi-connect runs wayvnc as a user service under the pi user
+    sudo -u pi XDG_RUNTIME_DIR="/run/user/$(id -u pi)" \
+        systemctl --user disable rpi-connect-wayvnc.service 2>/dev/null || true
+    sudo -u pi XDG_RUNTIME_DIR="/run/user/$(id -u pi)" \
+        systemctl --user stop rpi-connect-wayvnc.service 2>/dev/null || true
+    sudo -u pi XDG_RUNTIME_DIR="/run/user/$(id -u pi)" \
+        systemctl --user disable rpi-connect.service 2>/dev/null || true
+    sudo -u pi XDG_RUNTIME_DIR="/run/user/$(id -u pi)" \
+        systemctl --user stop rpi-connect.service 2>/dev/null || true
+    # Also try system-level in case of non-standard install
     systemctl disable wayvnc 2>/dev/null || true
     systemctl stop wayvnc 2>/dev/null || true
-    # Also disable rpi-connect's wayvnc if present
-    systemctl disable rpi-connect-wayvnc 2>/dev/null || true
-    systemctl stop rpi-connect-wayvnc 2>/dev/null || true
     ok "VNC disabled (~43 MB saved)."
 else
     ok "VNC enabled (wayvnc for remote desktop access)."
