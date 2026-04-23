@@ -13,6 +13,7 @@ from dashboard.models import (
     CalendarEvent,
     NewsHeadline,
     StockQuote,
+    Timer,
     UserDashboard,
     WeatherCache,
 )
@@ -121,5 +122,17 @@ class NewsHeadlineFactory(DjangoModelFactory):
     published_at = factory.LazyFunction(
         lambda: datetime(2026, 3, 17, 8, 0, tzinfo=timezone.utc)
     )
+
+
+class TimerFactory(DjangoModelFactory):
+    class Meta:
+        model = Timer
+
+    label = ""
+    duration_seconds = 300
+    expires_at = factory.LazyFunction(
+        lambda: datetime(2026, 4, 23, 12, 5, 0, tzinfo=timezone.utc)
+    )
+    status = Timer.Status.RUNNING
 
 

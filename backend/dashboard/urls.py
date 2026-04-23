@@ -14,6 +14,10 @@ urlpatterns = [
     path("weather/location/", views.WeatherLocationView.as_view(), name="weather-location"),
     path("glucose/", views.GlucoseView.as_view(), name="glucose"),
     path("word-of-the-day/", views.WordOfTheDayView.as_view(), name="word-of-the-day"),
+    # Timers
+    path("timers/", views.TimerView.as_view(), name="timers"),
+    path("timers/dismiss/", views.TimerDismissView.as_view(), name="timers-dismiss"),
+    path("timers/<int:timer_id>/", views.TimerView.as_view(), name="timer-detail"),
     # Auth
     path("auth/status/", views.AuthStatusView.as_view(), name="auth-status"),
     path("auth/google/calendars/", views.GoogleCalendarListView.as_view(), name="google-calendars"),

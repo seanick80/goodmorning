@@ -148,6 +148,44 @@ class NewsHeadline(models.Model):
         return f"{self.source_name}: {self.title[:80]}"
 
 
+class Timer(models.Model):
+    """Kitchen timer. Max 2 active at once, displayed in the Clock widget."""
+
+    class Status(models.TextChoices):
+        RUNNING = "running", "Running"
+        RINGING = "ringing", "Ringing"
+        CANCELLED = "cancelled", "Cancelled"
+        DISMISSED = "dismissed", "Dismissed"
+
+    label = models.CharField(
+        max_length=100,
+        blank=True,
+        default="",
+        help_text="Optional label, e.g. 'pasta'",
+    )
+    duration_seconds = models.PositiveIntegerField(
+        help_text="Original duration in seconds",
+    )
+    expires_at = models.DateTimeField(
+        help_text="When the timer goes off",
+    )
+    status = models.CharField(
+        max_length=10,
+        choices=Status.choices,
+        default=Status.RUNNING,
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Timer"
+        verbose_name_plural = "Timers"
+        ordering = ["expires_at"]
+
+    def __str__(self) -> str:
+        name = self.label or "Timer"
+        return f"{name} ({self.duration_seconds}s, {self.status})"
+
+
 class GlucoseReading(models.Model):
     """Cached glucose reading from Dexcom CGM."""
 

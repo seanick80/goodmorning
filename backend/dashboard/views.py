@@ -20,6 +20,7 @@ from .models import (
     GlucoseReading,
     NewsHeadline,
     StockQuote,
+    Timer,
     UserDashboard,
     WeatherCache,
 )
@@ -28,6 +29,8 @@ from .serializers import (
     GlucoseReadingSerializer,
     NewsHeadlineSerializer,
     StockQuoteSerializer,
+    TimerCreateSerializer,
+    TimerSerializer,
     UserDashboardSerializer,
     WeatherCacheSerializer,
 )
@@ -705,3 +708,80 @@ class PhotoProxyView(APIView):
                 {"detail": "Failed to fetch photo."},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
+
+class TimerView(APIView):
+    """Kitchen timer CRUD.
+
+    GET  /api/timers/          — list active timers (running + ringing)
+    POST /api/timers/          — create a timer {duration_seconds, label?}
+    POST /api/timers/dismiss/  — dismiss all ringing timers
+    DELETE /api/timers/<id>/   — cancel a specific timer
+    """
+
+    MAX_ACTIVE = 2
+
+    def get(self, request):
+        """Return active timers. Also auto-transition expired running → ringing."""
+        now = datetime.now(tz=timezone.utc)
+        Timer.objects.filter(
+            status=Timer.Status.RUNNING,
+            expires_at__lte=now,
+        ).update(status=Timer.Status.RINGING)
+
+        active = Timer.objects.filter(
+            status__in=[Timer.Status.RUNNING, Timer.Status.RINGING],
+        )
+        return Response(TimerSerializer(active, many=True).data)
+
+    def post(self, request):
+        """Create a new timer."""
+        ser = TimerCreateSerializer(data=request.data)
+        ser.is_valid(raise_exception=True)
+
+        active_count = Timer.objects.filter(
+            status__in=[Timer.Status.RUNNING, Timer.Status.RINGING],
+        ).count()
+        if active_count >= self.MAX_ACTIVE:
+            return Response(
+                {"detail": f"Maximum {self.MAX_ACTIVE} active timers."},
+                status=status.HTTP_409_CONFLICT,
+            )
+
+        now = datetime.now(tz=timezone.utc)
+        duration = ser.validated_data["duration_seconds"]
+        timer = Timer.objects.create(
+            label=ser.validated_data["label"],
+            duration_seconds=duration,
+            expires_at=now + timedelta(seconds=duration),
+        )
+        return Response(
+            TimerSerializer(timer).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    def delete(self, request, timer_id=None):
+        """Cancel a specific timer."""
+        try:
+            timer = Timer.objects.get(
+                id=timer_id,
+                status__in=[Timer.Status.RUNNING, Timer.Status.RINGING],
+            )
+        except Timer.DoesNotExist:
+            return Response(
+                {"detail": "Timer not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        timer.status = Timer.Status.CANCELLED
+        timer.save(update_fields=["status"])
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class TimerDismissView(APIView):
+    """POST /api/timers/dismiss/ — dismiss all ringing timers."""
+
+    def post(self, request):
+        count = Timer.objects.filter(
+            status=Timer.Status.RINGING,
+        ).update(status=Timer.Status.DISMISSED)
+        return Response({"dismissed": count})

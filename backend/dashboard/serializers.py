@@ -7,6 +7,7 @@ from .models import (
     GlucoseReading,
     NewsHeadline,
     StockQuote,
+    Timer,
     UserDashboard,
     WeatherCache,
 )
@@ -68,6 +69,26 @@ class GlucoseReadingSerializer(serializers.ModelSerializer):
             "trend_arrow",
             "recorded_at",
             "fetched_at",
+        ]
+
+
+class TimerCreateSerializer(serializers.Serializer):
+    """Validates timer creation: duration in seconds + optional label."""
+
+    duration_seconds = serializers.IntegerField(min_value=1, max_value=86400)
+    label = serializers.CharField(max_length=100, required=False, default="")
+
+
+class TimerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Timer
+        fields = [
+            "id",
+            "label",
+            "duration_seconds",
+            "expires_at",
+            "status",
+            "created_at",
         ]
 
 

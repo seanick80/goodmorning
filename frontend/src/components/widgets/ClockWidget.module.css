@@ -72,3 +72,69 @@
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
+
+/* Timer section (replaces aux clocks when timers are active) */
+
+.timerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.timerItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.timerLabel {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: var(--text-tertiary);
+  min-width: 5rem;
+  text-align: right;
+}
+
+.timerCountdown {
+  font-size: 1.75rem;
+  font-weight: 300;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+  min-width: 5rem;
+  text-align: center;
+}
+
+.timerRinging .timerCountdown {
+  color: #ff6b6b;
+  animation: timerPulse 1s ease-in-out infinite;
+}
+
+.timerCancelBtn {
+  background: none;
+  border: 1px solid var(--divider);
+  border-radius: 6px;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  font-size: 0.75rem;
+  padding: 0.2rem 0.5rem;
+  transition: color 0.2s, border-color 0.2s;
+}
+
+.timerCancelBtn:hover {
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+}
+
+.timerRinging .timerCancelBtn {
+  color: #ff6b6b;
+  border-color: #ff6b6b;
+  font-weight: 600;
+}
+
+@keyframes timerPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
