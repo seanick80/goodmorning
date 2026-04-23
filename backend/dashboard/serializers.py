@@ -76,7 +76,7 @@ class TimerCreateSerializer(serializers.Serializer):
     """Validates timer creation: duration in seconds + optional label."""
 
     duration_seconds = serializers.IntegerField(min_value=1, max_value=86400)
-    label = serializers.CharField(max_length=100, required=False, default="")
+    label = serializers.CharField(max_length=100, required=False, default="", allow_blank=True)
 
 
 class TimerSerializer(serializers.ModelSerializer):
