@@ -68,7 +68,11 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 
-# Database
+# Database — data directory for SQLite.
+# IMPORTANT: In production, set GOODMORNING_DATA_DIR explicitly in the systemd
+# service file.  The ~ default expands relative to the running user's HOME,
+# which differs between the 'pi' user (manage.py) and the 'goodmorning' user
+# (gunicorn), causing them to use different databases if unset.
 DATA_DIR = os.environ.get(
     "GOODMORNING_DATA_DIR",
     os.path.expanduser("~/goodmorning-data"),

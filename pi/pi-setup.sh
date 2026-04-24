@@ -221,6 +221,7 @@ User=goodmorning
 Group=goodmorning
 WorkingDirectory=/opt/goodmorning/backend
 Environment=DJANGO_SETTINGS_MODULE=config.settings
+Environment=GOODMORNING_DATA_DIR=/home/goodmorning/goodmorning-data
 ExecStart=/opt/goodmorning/backend/.venv/bin/gunicorn \\
     config.wsgi:application \\
     --bind 127.0.0.1:8000 \\
@@ -258,6 +259,7 @@ User=goodmorning
 Group=goodmorning
 WorkingDirectory=/opt/goodmorning/backend
 Environment=DJANGO_SETTINGS_MODULE=config.settings
+Environment=GOODMORNING_DATA_DIR=/home/goodmorning/goodmorning-data
 ExecStart=/opt/goodmorning/backend/.venv/bin/python \\
     manage.py run_scheduler
 Restart=always
