@@ -177,7 +177,10 @@ def fetch_google_photos() -> None:
     """
     from allauth.socialaccount.models import SocialAccount
 
-    from dashboard.services.google_api import fetch_picker_media_items
+    from dashboard.services.google_api import (
+        fetch_picker_media_items,
+        persist_media_items,
+    )
 
     # Find a Google-connected user for API credentials
     google_account = SocialAccount.objects.filter(
@@ -204,6 +207,10 @@ def fetch_google_photos() -> None:
             media = fetch_picker_media_items(google_user, session_id)
             if not media:
                 continue
+
+            # Download any not-yet-saved images so local copies stay complete
+            # while the Picker session is still alive.
+            media = persist_media_items(google_user, media)
 
             for widget in dashboard.widget_layout:
                 if widget.get("widget") == "photos":

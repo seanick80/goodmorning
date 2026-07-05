@@ -79,6 +79,12 @@ DATA_DIR = os.environ.get(
 )
 os.makedirs(DATA_DIR, exist_ok=True)
 
+# Local storage for background photos downloaded from Google Photos.
+# Picked images are downloaded here so backgrounds survive Picker session
+# expiry, token refresh, and re-login (Picker baseUrls/sessions are ephemeral).
+BACKGROUNDS_DIR = os.path.join(DATA_DIR, "backgrounds")
+os.makedirs(BACKGROUNDS_DIR, exist_ok=True)
+
 _sqlite_url = f"sqlite:///{os.path.join(DATA_DIR, 'db.sqlite3')}"
 _database_url = os.environ.get("DATABASE_URL", "").strip() or _sqlite_url
 DATABASES = {

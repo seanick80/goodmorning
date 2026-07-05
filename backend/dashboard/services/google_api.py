@@ -61,7 +61,14 @@ def get_google_credentials(user: User) -> Credentials | None:
         credentials.refresh(Request())
         token.token = credentials.token
         token.expires_at = credentials.expiry
-        token.save(update_fields=["token", "expires_at"])
+        update_fields = ["token", "expires_at"]
+        # Google may rotate the refresh token; persist it if it changed so we
+        # don't keep sending a stale one (which eventually fails with
+        # invalid_grant and forces a re-login).
+        if credentials.refresh_token and credentials.refresh_token != token.token_secret:
+            token.token_secret = credentials.refresh_token
+            update_fields.append("token_secret")
+        token.save(update_fields=update_fields)
         logger.info("Refreshed Google access token for %s", user.username)
 
     return credentials
@@ -240,6 +247,103 @@ def fetch_picker_media_items(
             break
 
     return media_items
+
+
+def _local_filename(item: dict) -> str:
+    """Stable on-disk filename for a picked media item."""
+    import hashlib
+
+    key = item.get("id") or item.get("base_url", "")
+    ext = ".png" if "png" in item.get("mime_type", "").lower() else ".jpg"
+    return hashlib.sha1(key.encode()).hexdigest()[:20] + ext
+
+
+def persist_media_items(user: User, items: list[dict]) -> list[dict]:
+    """Download picked photos to local storage and annotate with 'local_path'.
+
+    Picker baseUrls and sessions are ephemeral, so we download the bytes once
+    and serve them locally thereafter. Idempotent: skips items already saved.
+    Items that fail to download are returned unchanged (proxy fallback still
+    applies) so one bad photo doesn't drop the rest.
+    """
+    import os
+
+    import requests
+
+    from django.conf import settings
+
+    credentials = get_google_credentials(user)
+    if credentials is None:
+        return items
+
+    os.makedirs(settings.BACKGROUNDS_DIR, exist_ok=True)
+
+    result: list[dict] = []
+    for item in items:
+        base_url = item.get("base_url", "")
+        if not base_url:
+            result.append(item)
+            continue
+
+        fname = _local_filename(item)
+        fpath = os.path.join(settings.BACKGROUNDS_DIR, fname)
+
+        if not (os.path.exists(fpath) and os.path.getsize(fpath) > 0):
+            try:
+                resp = requests.get(
+                    f"{base_url}=w1920-h1080",
+                    headers={"Authorization": f"Bearer {credentials.token}"},
+                    timeout=20,
+                )
+                resp.raise_for_status()
+                with open(fpath, "wb") as fh:
+                    fh.write(resp.content)
+            except Exception:
+                logger.exception(
+                    "Failed to download picked photo %s", item.get("id", ""),
+                )
+                result.append(item)
+                continue
+
+        result.append({**item, "local_path": fname})
+
+    return result
+
+
+def prune_orphan_backgrounds() -> int:
+    """Delete downloaded background files no longer referenced by any dashboard.
+
+    Returns the number of files removed.
+    """
+    import os
+
+    from django.conf import settings
+
+    from dashboard.models import UserDashboard
+
+    referenced: set[str] = set()
+    for dashboard in UserDashboard.objects.all():
+        for widget in dashboard.widget_layout:
+            if widget.get("widget") != "photos":
+                continue
+            for media in widget.get("settings", {}).get("cached_media", []):
+                local_path = media.get("local_path")
+                if local_path:
+                    referenced.add(local_path)
+
+    removed = 0
+    try:
+        for fname in os.listdir(settings.BACKGROUNDS_DIR):
+            if fname not in referenced:
+                try:
+                    os.remove(os.path.join(settings.BACKGROUNDS_DIR, fname))
+                    removed += 1
+                except OSError:
+                    logger.warning("Could not delete orphan background %s", fname)
+    except FileNotFoundError:
+        pass
+
+    return removed
 
 
 def _parse_gcal_datetime(

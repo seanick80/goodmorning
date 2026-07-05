@@ -496,10 +496,15 @@ class PhotosPickerMediaView(APIView):
                 status=status.HTTP_401_UNAUTHORIZED,
             )
 
-        from .services.google_api import fetch_picker_media_items
+        from .services.google_api import (
+            fetch_picker_media_items,
+            persist_media_items,
+        )
 
         try:
             items = fetch_picker_media_items(request.user, session_id)
+            # Download the bytes now so backgrounds survive session expiry.
+            items = persist_media_items(request.user, items)
             return Response(items)
         except Exception as exc:
             logger.exception("Failed to fetch Picker media items")
@@ -628,6 +633,25 @@ class PhotoProxyView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        # Prefer the locally-stored copy — durable across Picker session
+        # expiry, token refresh, and re-login, and needs no Google call.
+        import os
+
+        from django.conf import settings as dj_settings
+
+        local_path = photos[index].get("local_path")
+        if local_path:
+            fpath = os.path.join(dj_settings.BACKGROUNDS_DIR, local_path)
+            if os.path.exists(fpath) and os.path.getsize(fpath) > 0:
+                with open(fpath, "rb") as fh:
+                    data = fh.read()
+                ctype = "image/png" if local_path.endswith(".png") else "image/jpeg"
+                return HttpResponse(
+                    data,
+                    content_type=ctype,
+                    headers={"Cache-Control": "public, max-age=3600"},
+                )
+
         from allauth.socialaccount.models import SocialAccount
 
         google_account = SocialAccount.objects.filter(
@@ -708,6 +732,46 @@ class PhotoProxyView(APIView):
                 {"detail": "Failed to fetch photo."},
                 status=status.HTTP_502_BAD_GATEWAY,
             )
+
+    def delete(self, request: object, index: int) -> Response:
+        """Remove a single background photo and delete its local file."""
+        if not request.user.is_authenticated:
+            return Response(
+                {"detail": "Authentication required."},
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+
+        from .services.google_api import prune_orphan_backgrounds
+
+        user = User.objects.filter(is_superuser=True).first()
+        if user is None or not hasattr(user, "dashboard"):
+            return Response(
+                {"detail": "No dashboard configured."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        dashboard = user.dashboard
+        photos_widget = next(
+            (w for w in dashboard.widget_layout if w.get("widget") == "photos"),
+            None,
+        )
+        media = (
+            photos_widget.get("settings", {}).get("cached_media", [])
+            if photos_widget
+            else []
+        )
+        if photos_widget is None or index < 0 or index >= len(media):
+            return Response(
+                {"detail": "Photo not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        media.pop(index)
+        photos_widget["settings"]["cached_media"] = media
+        dashboard.save()
+
+        pruned = prune_orphan_backgrounds()
+        return Response({"remaining": len(media), "pruned_files": pruned})
 
 
 class TimerView(APIView):
