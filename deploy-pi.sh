@@ -91,23 +91,40 @@ ok "Frontend built."
 # Sync functions
 # -------------------------------------------------------------------
 sync_with_rsync() {
-    local RSYNC_OPTS="-az --delete --exclude=__pycache__ --exclude=*.pyc --exclude=.venv --exclude=logs --exclude=.env --exclude=staticfiles"
+    # $PI_DIR is owned by the 'goodmorning' service user, so the 'pi' SSH user
+    # cannot rsync into it directly. Stage into a pi-writable /tmp dir, then
+    # sudo the files into place and fix ownership. Excludes protect the Pi's
+    # .venv, .env, logs, and staticfiles from --delete.
+    local RSYNC_OPTS="-az --delete --exclude=__pycache__ --exclude=*.pyc --exclude=.venv --exclude=logs --exclude=.env --exclude=staticfiles --exclude=db.sqlite3"
+    local STAGE="/tmp/gm-stage"
+
+    ssh "$PI_USER@$PI_HOST" "rm -rf $STAGE && mkdir -p $STAGE/backend $STAGE/dist $STAGE/pi"
 
     if [[ "$MODE" == "--frontend-only" ]]; then
-        info "Syncing frontend only..."
-        rsync $RSYNC_OPTS "$FRONTEND_DIR/dist/" "$PI_USER@$PI_HOST:$PI_DIR/frontend/dist/"
+        info "Staging frontend..."
+        rsync -az --delete "$FRONTEND_DIR/dist/" "$PI_USER@$PI_HOST:$STAGE/dist/"
+        info "Installing frontend on Pi..."
+        ssh "$PI_USER@$PI_HOST" "set -e
+            sudo rsync -a --delete $STAGE/dist/ $PI_DIR/frontend/dist/
+            sudo chown -R goodmorning:goodmorning $PI_DIR/frontend
+            rm -rf $STAGE"
         ok "Frontend synced."
         return
     fi
 
-    info "Syncing backend..."
-    rsync $RSYNC_OPTS "$BACKEND_DIR/" "$PI_USER@$PI_HOST:$PI_DIR/backend/"
+    info "Staging backend, frontend, and Pi configs..."
+    rsync $RSYNC_OPTS "$BACKEND_DIR/" "$PI_USER@$PI_HOST:$STAGE/backend/"
+    rsync -az --delete "$FRONTEND_DIR/dist/" "$PI_USER@$PI_HOST:$STAGE/dist/"
+    rsync -az "$PI_CONF_DIR/" "$PI_USER@$PI_HOST:$STAGE/pi/"
 
-    info "Syncing frontend..."
-    rsync $RSYNC_OPTS "$FRONTEND_DIR/dist/" "$PI_USER@$PI_HOST:$PI_DIR/frontend/dist/"
-
-    info "Syncing Pi configs..."
-    rsync $RSYNC_OPTS "$PI_CONF_DIR/" "$PI_USER@$PI_HOST:$PI_DIR/pi/"
+    info "Installing on Pi (sudo; preserving .venv/.env/logs)..."
+    ssh "$PI_USER@$PI_HOST" "set -e
+        sudo rsync -a $RSYNC_OPTS $STAGE/backend/ $PI_DIR/backend/
+        sudo rsync -a --delete $STAGE/dist/ $PI_DIR/frontend/dist/
+        sudo rsync -a $STAGE/pi/ $PI_DIR/pi/
+        sudo chown -R goodmorning:goodmorning $PI_DIR/backend $PI_DIR/frontend $PI_DIR/pi
+        sudo chmod +x $PI_DIR/pi/*.sh
+        rm -rf $STAGE"
 
     ok "Files synced."
 }
@@ -216,15 +233,15 @@ fi
 case "$MODE" in
     --setup)
         info "Running first-time setup on Pi..."
-        ssh "$PI_USER@$PI_HOST" "chmod +x $PI_DIR/pi/pi-update.sh $PI_DIR/pi/pi-health.sh && $PI_DIR/pi/pi-update.sh --setup"
+        ssh "$PI_USER@$PI_HOST" "bash $PI_DIR/pi/pi-update.sh --setup"
         ;;
     --full)
         info "Running full update on Pi..."
-        ssh "$PI_USER@$PI_HOST" "$PI_DIR/pi/pi-update.sh --full"
+        ssh "$PI_USER@$PI_HOST" "bash $PI_DIR/pi/pi-update.sh --full"
         ;;
     *)
         info "Running quick update on Pi..."
-        ssh "$PI_USER@$PI_HOST" "$PI_DIR/pi/pi-update.sh"
+        ssh "$PI_USER@$PI_HOST" "bash $PI_DIR/pi/pi-update.sh"
         ;;
 esac
 
