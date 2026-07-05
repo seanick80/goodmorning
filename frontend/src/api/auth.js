@@ -24,6 +24,10 @@ export function fetchPhotosPickerMedia(sessionId) {
   return apiFetch(`/auth/google/photos/picker/${sessionId}/media/`);
 }
 
+export function deletePhoto(index) {
+  return apiFetch(`/photos/${index}/`, { method: "DELETE" });
+}
+
 export function patchDashboard(data) {
   return apiFetch("/dashboard/", {
     method: "PATCH",

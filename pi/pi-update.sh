@@ -16,6 +16,19 @@ PIP="$VENV/bin/pip"
 PYTHON="$VENV/bin/python"
 MODE="${1:-quick}"
 
+# The venv, SQLite DB, and staticfiles are owned by the 'goodmorning' service
+# user (matching how gunicorn runs). This script is invoked over SSH as 'pi',
+# so run pip/manage.py as 'goodmorning' to avoid PermissionError and to write
+# the DB in the service user's data dir.
+APP_USER="goodmorning"
+DATA_DIR="/home/$APP_USER/goodmorning-data"
+as_app() {
+    sudo -u "$APP_USER" env \
+        DJANGO_SETTINGS_MODULE=config.settings \
+        GOODMORNING_DATA_DIR="$DATA_DIR" \
+        "$@"
+}
+
 GREEN='\033[0;32m'
 CYAN='\033[0;36m'
 NC='\033[0m'
@@ -45,17 +58,17 @@ sudo chown -R goodmorning:goodmorning "$BACKEND"
 # Full mode: install/upgrade dependencies
 if [[ "$MODE" == "--full" || "$MODE" == "--setup" ]]; then
     info "Installing Python dependencies..."
-    $PIP install -q --upgrade pip
-    $PIP install -q -r "$BACKEND/requirements.txt"
+    as_app "$PIP" install -q --upgrade pip
+    as_app "$PIP" install -q -r "$BACKEND/requirements.txt"
 fi
 
 # Run migrations
 info "Running database migrations..."
-$PYTHON "$BACKEND/manage.py" migrate --no-input
+as_app "$PYTHON" "$BACKEND/manage.py" migrate --no-input
 
 # Collect static files (Django admin CSS/JS)
 info "Collecting static files..."
-$PYTHON "$BACKEND/manage.py" collectstatic --no-input --clear -v0
+as_app "$PYTHON" "$BACKEND/manage.py" collectstatic --no-input --clear -v0
 
 # Re-install configs if --setup
 if [[ "$MODE" == "--setup" ]]; then

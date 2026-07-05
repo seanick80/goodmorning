@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import requests
@@ -177,3 +177,82 @@ def _create_user():
         username=f"svcuser{User.objects.count()}",
         password="testpass123",
     )
+
+
+class TestPersistMediaItems:
+    @pytest.mark.django_db()
+    def test_downloads_and_annotates_idempotently(self, settings, tmp_path):
+        from dashboard.services import google_api
+
+        settings.BACKGROUNDS_DIR = str(tmp_path)
+        user = _create_user()
+        items = [{"id": "abc", "base_url": "https://lh3/x", "mime_type": "image/jpeg"}]
+
+        creds = MagicMock()
+        creds.token = "tok"
+        resp = MagicMock()
+        resp.content = b"img-bytes"
+        resp.raise_for_status = MagicMock()
+
+        with patch.object(google_api, "get_google_credentials", return_value=creds), \
+                patch("requests.get", return_value=resp) as mget:
+            out = google_api.persist_media_items(user, items)
+            out2 = google_api.persist_media_items(user, items)  # already saved
+
+        local = out[0]["local_path"]
+        assert local
+        assert (tmp_path / local).read_bytes() == b"img-bytes"
+        assert mget.call_count == 1  # second call skips the existing file
+        assert out2[0]["local_path"] == local
+
+    @pytest.mark.django_db()
+    def test_no_credentials_returns_items_unchanged(self, settings, tmp_path):
+        from dashboard.services import google_api
+
+        settings.BACKGROUNDS_DIR = str(tmp_path)
+        user = _create_user()
+        items = [{"id": "a", "base_url": "u"}]
+        with patch.object(google_api, "get_google_credentials", return_value=None):
+            out = google_api.persist_media_items(user, items)
+        assert out == items
+
+    @pytest.mark.django_db()
+    def test_failed_download_keeps_item_without_local_path(self, settings, tmp_path):
+        from dashboard.services import google_api
+
+        settings.BACKGROUNDS_DIR = str(tmp_path)
+        user = _create_user()
+        items = [{"id": "a", "base_url": "u"}]
+        creds = MagicMock()
+        creds.token = "tok"
+        with patch.object(google_api, "get_google_credentials", return_value=creds), \
+                patch("requests.get", side_effect=requests.Timeout("boom")):
+            out = google_api.persist_media_items(user, items)
+        assert "local_path" not in out[0]
+
+
+class TestPruneOrphanBackgrounds:
+    @pytest.mark.django_db()
+    def test_deletes_only_unreferenced_files(self, settings, tmp_path):
+        from dashboard.models import UserDashboard
+        from dashboard.services.google_api import prune_orphan_backgrounds
+
+        settings.BACKGROUNDS_DIR = str(tmp_path)
+        (tmp_path / "keep.jpg").write_bytes(b"k")
+        (tmp_path / "orphan.jpg").write_bytes(b"o")
+        user = _create_user()
+        UserDashboard.objects.create(
+            user=user,
+            widget_layout=[
+                {
+                    "widget": "photos",
+                    "settings": {"cached_media": [{"local_path": "keep.jpg"}]},
+                },
+            ],
+        )
+
+        removed = prune_orphan_backgrounds()
+
+        assert removed == 1
+        assert (tmp_path / "keep.jpg").exists()
+        assert not (tmp_path / "orphan.jpg").exists()

@@ -321,6 +321,71 @@ class TestPhotoProxyView:
         response = api_client.get("/api/photos/0/")
         assert response.status_code == 400
 
+    def test_serves_local_file_without_google(
+        self, api_client, superuser, settings, tmp_path,
+    ):
+        # A downloaded copy is served directly -- no Google account needed.
+        settings.BACKGROUNDS_DIR = str(tmp_path)
+        (tmp_path / "img0.jpg").write_bytes(b"local-image-bytes")
+        self._make_photos_dashboard(superuser, cached_media=[
+            {"base_url": "https://lh3.google.com/photo1", "local_path": "img0.jpg"},
+        ])
+
+        response = api_client.get("/api/photos/0/")
+
+        assert response.status_code == 200
+        assert response.content == b"local-image-bytes"
+        assert response["Content-Type"] == "image/jpeg"
+
+
+class TestPhotoDelete:
+    def _dashboard_with(self, superuser, cached_media):
+        return UserDashboardFactory(
+            user=superuser,
+            widget_layout=[
+                {
+                    "widget": "photos",
+                    "enabled": True,
+                    "position": 0,
+                    "settings": {"cached_media": cached_media},
+                },
+            ],
+        )
+
+    def test_unauthenticated_returns_401(self, api_client, superuser):
+        self._dashboard_with(superuser, [{"base_url": "x", "local_path": "a.jpg"}])
+        response = api_client.delete("/api/photos/0/")
+        assert response.status_code == 401
+
+    def test_invalid_index_returns_404(self, api_client, superuser):
+        self._dashboard_with(superuser, [{"base_url": "x"}])
+        api_client.force_authenticate(user=superuser)
+        response = api_client.delete("/api/photos/5/")
+        assert response.status_code == 404
+
+    def test_removes_photo_and_deletes_local_file(
+        self, api_client, superuser, settings, tmp_path,
+    ):
+        settings.BACKGROUNDS_DIR = str(tmp_path)
+        (tmp_path / "a.jpg").write_bytes(b"a")
+        (tmp_path / "b.jpg").write_bytes(b"b")
+        dashboard = self._dashboard_with(superuser, [
+            {"base_url": "x", "local_path": "a.jpg"},
+            {"base_url": "y", "local_path": "b.jpg"},
+        ])
+        api_client.force_authenticate(user=superuser)
+
+        response = api_client.delete("/api/photos/0/")
+
+        assert response.status_code == 200
+        assert response.json()["remaining"] == 1
+        # Removed entry and its orphaned file are gone; the other survives.
+        dashboard.refresh_from_db()
+        media = dashboard.widget_layout[0]["settings"]["cached_media"]
+        assert [m["local_path"] for m in media] == ["b.jpg"]
+        assert not (tmp_path / "a.jpg").exists()
+        assert (tmp_path / "b.jpg").exists()
+
 
 class TestCSRFCookie:
     def test_auth_status_sets_csrf_cookie(self, api_client):

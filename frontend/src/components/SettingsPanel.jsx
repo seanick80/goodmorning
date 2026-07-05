@@ -6,6 +6,7 @@ import {
   createPhotosPickerSession,
   pollPhotosPickerSession,
   fetchPhotosPickerMedia,
+  deletePhoto,
   patchDashboard,
 } from "../api/auth";
 import LayoutEditor from "./LayoutEditor";
@@ -21,12 +22,10 @@ function PhotosPicker() {
   const queryClient = useQueryClient();
   const { data: dashboard } = useDashboard();
   const [status, setStatus] = useState("idle");
-  const [photoCount, setPhotoCount] = useState(null);
   const [interval, setInterval_] = useState(() => getSavedInterval(dashboard));
   const pollRef = useRef(null);
   const intervalSaveRef = useRef(null);
 
-  const savedSessionId = getSavedPickerSessionId(dashboard);
   const savedPhotoCount = getSavedPhotoCount(dashboard);
 
   useEffect(() => {
@@ -65,7 +64,6 @@ function PhotosPicker() {
           setStatus("fetching");
           const media = await fetchPhotosPickerMedia(sessionId);
           await savePickerSession(sessionId, media);
-          setPhotoCount(media.length);
           setStatus("done");
         }
       } catch {
@@ -78,10 +76,20 @@ function PhotosPicker() {
   async function savePickerSession(sessionId, media) {
     const widgetLayout = dashboard?.widget_layout ?? [];
     const photoWidget = widgetLayout.find((w) => w.widget === "photos");
+
+    // Append to the existing set (dedupe by id); a new pick adds photos
+    // rather than replacing everything. Newer entries win so freshly
+    // downloaded local_path/base_url values replace any stale ones.
+    const existing = photoWidget?.settings?.cached_media ?? [];
+    const byKey = new Map();
+    for (const m of existing) byKey.set(m.id ?? m.base_url, m);
+    for (const m of media) byKey.set(m.id ?? m.base_url, m);
+    const merged = Array.from(byKey.values());
+
     const updatedSettings = {
       ...(photoWidget?.settings ?? {}),
       picker_session_id: sessionId,
-      cached_media: media,
+      cached_media: merged,
     };
     const updatedLayout = widgetLayout.map((w) =>
       w.widget === "photos" ? { ...w, settings: updatedSettings } : w
@@ -96,6 +104,16 @@ function PhotosPicker() {
     }
     await patchDashboard({ widget_layout: updatedLayout });
     queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    return merged.length;
+  }
+
+  async function handleRemovePhoto(index) {
+    try {
+      await deletePhoto(index);
+      queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+    } catch {
+      setStatus("error");
+    }
   }
 
   function handleIntervalChange(e) {
@@ -115,12 +133,34 @@ function PhotosPicker() {
     }, 500);
   }
 
+  const busy =
+    status === "creating" || status === "polling" || status === "fetching";
+
   return (
     <div className={styles.section}>
       <h3 className={styles.sectionTitle}>Background Images</h3>
-      {savedSessionId && savedPhotoCount > 0 && status !== "done" && (
-        <p className={styles.info}>{savedPhotoCount} photos selected</p>
+
+      {savedPhotoCount > 0 ? (
+        <div className={styles.photoGrid}>
+          {Array.from({ length: savedPhotoCount }).map((_, i) => (
+            <div key={i} className={styles.photoThumb}>
+              <img src={`/api/photos/${i}/?w=320&h=180`} alt={`Background ${i + 1}`} />
+              <button
+                type="button"
+                className={styles.photoRemove}
+                onClick={() => handleRemovePhoto(i)}
+                aria-label={`Remove background ${i + 1}`}
+                title="Remove"
+              >
+                ×
+              </button>
+            </div>
+          ))}
+        </div>
+      ) : (
+        !busy && <p className={styles.info}>No background photos yet.</p>
       )}
+
       {savedPhotoCount > 1 && (
         <label className={styles.sliderLabel}>
           <span>Rotate every {interval}s</span>
@@ -135,47 +175,25 @@ function PhotosPicker() {
           />
         </label>
       )}
-      {status === "idle" && (
+
+      {busy ? (
+        <p className={styles.info}>
+          {status === "creating" && "Opening photo picker..."}
+          {status === "polling" && "Waiting for photo selection..."}
+          {status === "fetching" && "Downloading photos..."}
+        </p>
+      ) : (
         <button
           type="button"
           onClick={handleChoosePhotos}
           className={styles.actionButton}
         >
-          Choose Photos
+          {savedPhotoCount > 0 ? "Add Photos" : "Choose Photos"}
         </button>
       )}
-      {status === "creating" && (
-        <p className={styles.info}>Opening photo picker...</p>
-      )}
-      {status === "polling" && (
-        <p className={styles.info}>Waiting for photo selection...</p>
-      )}
-      {status === "fetching" && (
-        <p className={styles.info}>Saving photos...</p>
-      )}
-      {status === "done" && (
-        <>
-          <p className={styles.success}>{photoCount} photos selected</p>
-          <button
-            type="button"
-            onClick={() => setStatus("idle")}
-            className={styles.actionButton}
-          >
-            Choose Different Photos
-          </button>
-        </>
-      )}
+
       {status === "error" && (
-        <>
-          <p className={styles.errorText}>Something went wrong. Please try again.</p>
-          <button
-            type="button"
-            onClick={() => setStatus("idle")}
-            className={styles.actionButton}
-          >
-            Retry
-          </button>
-        </>
+        <p className={styles.errorText}>Something went wrong. Please try again.</p>
       )}
     </div>
   );
@@ -1033,12 +1051,6 @@ export default function SettingsPanel({ onClose, photoFrameMode, onTogglePhotoFr
       </div>
     </div>
   );
-}
-
-function getSavedPickerSessionId(dashboard) {
-  if (!dashboard?.widget_layout) return null;
-  const photoWidget = dashboard.widget_layout.find((w) => w.widget === "photos");
-  return photoWidget?.settings?.picker_session_id ?? null;
 }
 
 function getSavedPhotoCount(dashboard) {
