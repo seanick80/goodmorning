@@ -15,6 +15,10 @@ pi/.env.production
 secrets/
 backups/
 
+# USB deploy kit (contains SSH private key) — never commit
+ssh/
+setup.sh
+
 # Node
 node_modules/
 frontend/dist/

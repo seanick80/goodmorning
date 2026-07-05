@@ -71,6 +71,24 @@ apt-get install -y -qq "${PACKAGES[@]}"
 ok "System packages installed."
 
 # -------------------------------------------------------------------
+# 1a. Disable IPv6
+# -------------------------------------------------------------------
+# Some routers advertise IPv6 (a ULA address via router-advertisement)
+# without providing a working IPv6 route to the internet. When that
+# happens the Pi resolves Google hosts to IPv6 and tries them first, so
+# the OAuth login page, token refresh, and Calendar/Photos API calls all
+# stall or time out — appearing as "login won't load" and "keeps getting
+# logged out". Disabling IPv6 forces all outbound traffic over IPv4.
+info "Disabling IPv6 (avoids broken-IPv6 stalls on Google OAuth/APIs)..."
+cat > /etc/sysctl.d/99-disable-ipv6.conf <<'SYSCTL'
+net.ipv6.conf.all.disable_ipv6 = 1
+net.ipv6.conf.default.disable_ipv6 = 1
+net.ipv6.conf.lo.disable_ipv6 = 0
+SYSCTL
+sysctl --system > /dev/null
+ok "IPv6 disabled."
+
+# -------------------------------------------------------------------
 # 2. Application user
 # -------------------------------------------------------------------
 if ! id "$APP_USER" &>/dev/null; then
