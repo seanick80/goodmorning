@@ -15,5 +15,12 @@ ExecStart=/opt/goodmorning/backend/.venv/bin/python \
 Restart=always
 RestartSec=10
 
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+PrivateTmp=true
+ReadWritePaths=/home/goodmorning/goodmorning-data /opt/goodmorning/backend/logs
+
 [Install]
 WantedBy=multi-user.target

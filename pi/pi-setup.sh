@@ -62,7 +62,7 @@ apt-get update -qq
 # manually before deploying if desired: sudo apt-get upgrade -y
 
 info "Installing dependencies..."
-PACKAGES=(python3 python3-venv python3-dev nginx chromium curl)
+PACKAGES=(python3 python3-venv python3-dev nginx chromium curl ufw)
 if [[ "$GM_DATABASE" == "postgres" ]]; then
     PACKAGES+=(postgresql postgresql-client libpq-dev gcc)
 fi
